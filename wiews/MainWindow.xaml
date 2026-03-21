@@ -83,11 +83,35 @@
                     </StackPanel>
                     <ListBox Height="150">
                         <ListBoxItem>
-                            
+							<StackPanel Orientation="Horizontal" Justify="SpaceBetween">
+								<TextBlock Text="пуппу"/>
+								<Button Content="X" Background="Transparent"
+										Foreground="Red" BorderThickness="0"/>
+							</StackPanel>
                         </ListBoxItem>
                     </ListBox>
+					<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+						<Button Content="Открыть" Margin="0,0,5,0" Padding="10,5"/>
+						<Button Content="Удалить" Padding="10,5"/>
+					</StackPanel>   
                 </ScrollViewer>
             </Border>
         </Grid>
+		<Border Grid.Row="3" Background="#1E1E1E" Padding="10" Margin="5,0,5,5" CornerRadius="4">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<Slider Grid.Column="1" Margin="10,0"/>
+
+				<StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+					<TextBlock Text="Громкость:" Margin="0,0,5,0"/>
+					<Slider Width="100" Minimum="0" Maximum="1" Value="0.5"/>
+				</StackPanel>
+			</Grid>
+		</Border>
     </Grid>
 </Window>
