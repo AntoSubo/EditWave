@@ -52,7 +52,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+            </Grid.ColumnDefinitions>                         
 
             <Border Grid.Column="0" Margin="5" CornerRadius="5">
                 <Grid>
