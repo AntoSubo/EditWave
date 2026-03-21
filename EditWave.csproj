@@ -9,7 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="wiewmodel\" />
+    <Compile Remove="wiewmodel\**" />
+    <EmbeddedResource Remove="wiewmodel\**" />
+    <None Remove="wiewmodel\**" />
+    <Page Remove="wiewmodel\**" />
   </ItemGroup>
 
   <ItemGroup>
