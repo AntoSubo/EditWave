@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EditWave.ViewModels
+namespace EditWave.Services
 {
-    public class AboutViewModel
+    public class AudioService
     {
     }
 }

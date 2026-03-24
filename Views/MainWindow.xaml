@@ -37,15 +37,15 @@
 
         <ToolBar Grid.Row="1">
             <Button Command="{Binding PlayCommand}" Content="▶" Margin="5" Padding="5"/>
-            <Button Content="⏸" Margin="5" Padding="5"/>
-            <Button Content="⏹" Margin="5" Padding="5"/>
+            <Button Command="{Binding PauseCommand}" Content="⏸" Margin="5" Padding="5"/>
+            <Button Command="{Binding StopCommand}" Content="⏹" Margin="5" Padding="5"/>
             <Separator/>
-            <Button Content="Обрезать" Margin="5" Padding="5"/>
-            <Button Content="Удалить" Margin="5" Padding="5"/>
-            <Button Content="Усиление" Margin="5" Padding="5"/>
-            <Button Content="Реверс" Margin="5" Padding="5"/>
+            <Button Command="{Binding TrimCommand}" Content="Обрезать" Margin="5" Padding="5"/>
+            <Button Command="{Binding DeleteCommand}" Content="Удалить" Margin="5" Padding="5"/>
+            <Button Command="{Binding ApplyGainCommand}" Content="Усиление" Margin="5" Padding="5"/>
+            <Button Command="{Binding ApplyReverseCommand}" Content="Реверс" Margin="5" Padding="5"/>
             <Separator/>
-            <Button Content="💾" Margin="5" Padding="5"/>
+            <Button Command="{Binding SaveProjectCommand}" Content="💾" Margin="5" Padding="5"/>
         </ToolBar>
 
         <Grid Grid.Row="2">
