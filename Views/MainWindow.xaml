@@ -36,7 +36,7 @@
         </Menu>
 
         <ToolBar Grid.Row="1">
-            <Button Content="▶" Margin="5" Padding="5"/>
+            <Button Command="{Binding PlayCommand}" Content="▶" Margin="5" Padding="5"/>
             <Button Content="⏸" Margin="5" Padding="5"/>
             <Button Content="⏹" Margin="5" Padding="5"/>
             <Separator/>

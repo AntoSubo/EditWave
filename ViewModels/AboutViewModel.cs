@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EditWave.WiewModels
+namespace EditWave.ViewModels
 {
-    internal class AboutWiewModel
+    internal class AboutViewModel
     {
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using EditWave.ViewModels;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -11,14 +12,12 @@ using System.Windows.Shapes;
 
 namespace EditWave
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = new MainViewModel(); // перестать забывать про эту строку, без нее ниче не робит
         }
     }
 }

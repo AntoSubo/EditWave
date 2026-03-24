@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace EditWave.WiewModels
+namespace EditWave.ViewModels
 {
     public class RelayCommand : ICommand
     {
@@ -14,7 +14,7 @@ namespace EditWave.WiewModels
 
         public RelayCommand(Action<object> execute, Func<object, bool> canExecute = null)
         {
-            if (_execute == null)
+            if (execute == null)
             {
                 throw new ArgumentNullException(nameof(execute));
             }
