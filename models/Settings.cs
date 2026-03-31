@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EditWave.models
+namespace EditWave.Models
 {
     public class Settings
     {
