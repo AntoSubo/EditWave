@@ -1,6 +1,6 @@
 ﻿using NAudio.Wave;
 using System;
-using System.Collections.Generic;
+using System.Timers;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +11,7 @@ namespace EditWave.Services
     {
         private AudioFileReader _audioFileReader;
         private WaveOutEvent _waveOut;
-        //todo поле для таймера (яничепоканепонимаюкакегописать)
+        private System.Timers.Timer _positionTimer;
         private bool _isPlaying;
         public bool IsPlaying => _isPlaying;
         public double Duration { get; private set; }
@@ -48,11 +48,12 @@ namespace EditWave.Services
             {
                 _waveOut.Stop();
                 _isPlaying = false;
-                //todo здесь таймер останавливать
+                _positionTimer?.Stop();
             }
             if (_audioFileReader != null)
             {
-                _audioFileReader.Position = 0; 
+                _audioFileReader.Position = 0;
+                PositionChanged?.Invoke();
             }
 
         }
@@ -63,8 +64,11 @@ namespace EditWave.Services
             if (_isPlaying) return;
 
             _waveOut.Play();
+            _positionTimer?.Stop();
             _isPlaying = true;
-            //todo тут таймер запускать
+            _positionTimer = new System.Timers.Timer(100);
+            _positionTimer.Elapsed += OnTimerTick;
+            _positionTimer.Start();
         }
         public void Pause()
         {
@@ -72,7 +76,7 @@ namespace EditWave.Services
             {
                 _waveOut.Pause();
                 _isPlaying = false;
-                //todo здесь таймер останавливать
+                _positionTimer?.Stop();
             }
         }
         public void SetVolume(float volume)
@@ -84,7 +88,18 @@ namespace EditWave.Services
         }
         public void SetPosition(double position)
         {
-            //todo ибо я устав я болею я не спав я мухожук
+            if (_audioFileReader == null) return;
+            if (position < 0.0f) position = 0.0f;
+            if (position > Duration) position = Duration;
+            _audioFileReader.CurrentTime = TimeSpan.FromSeconds(position);
+            PositionChanged?.Invoke();
+        }
+        private void OnTimerTick(object sender, ElapsedEventArgs args)
+        {
+            if (_isPlaying && _audioFileReader != null)
+            {
+                PositionChanged?.Invoke();
+            }
         }
     }
 }
