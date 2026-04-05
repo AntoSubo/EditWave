@@ -10,7 +10,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace EditWave
+namespace EditWave.Views
 {
     public partial class MainWindow : Window
     {
