@@ -93,6 +93,8 @@ namespace EditWave.ViewModels
         public ICommand SaveProjectCommand { get; }
         public ICommand OpenProjectCommand { get; }
         public ICommand ShowAboutCommand { get; }
+        public ICommand ExitCommand { get; }
+
         public MainViewModel()
         {
             _audioService = new AudioService();
@@ -107,6 +109,11 @@ namespace EditWave.ViewModels
             SaveProjectCommand = new RelayCommand(SaveProject);
             OpenProjectCommand = new RelayCommand(OpenProject);
             ShowAboutCommand = new RelayCommand(ShowAbout);
+            ExitCommand = new RelayCommand(Exit);
+        }
+        private void Exit(object parameter)
+        {
+            Application.Current.Shutdown();
         }
         private void OnPositionChanged()
         {

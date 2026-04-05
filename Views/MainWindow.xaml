@@ -18,7 +18,6 @@
             <MenuItem Header="Файл">
                 <MenuItem Header="Открыть" Command="{Binding OpenProjectCommand}"/>
                 <MenuItem Header="Сохранить" Command="{Binding SaveProjectCommand}"/>
-                <MenuItem Header="Экспорт" Command="{Binding ExportCommand}"/>
                 <Separator/>
                 <MenuItem Header="Выход" Command="{Binding ExitCommand}"/>
             </MenuItem>
