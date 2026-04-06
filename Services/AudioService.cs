@@ -334,7 +334,37 @@ namespace EditWave.Services
                 return samples.ToArray();
             }
         }
+        public void ApplyGain(float gainFactor)
+        {
+            if (_audioStream == null) return;
+            bool wasPlaying = _isPlaying;
+            Stop();
 
+            string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
+
+            using (var reader = new AudioFileReader(_currentFilePath))
+            using (var writer = new WaveFileWriter(tempFile, reader.WaveFormat))
+            {
+                var buffer = new float[4096];
+                int read;
+                while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    for (int i = 0; i < read; i++)
+                    {
+                        buffer[i] *= gainFactor;
+                   
+                        if (buffer[i] > 1.0f) buffer[i] = 1.0f;
+                        if (buffer[i] < -1.0f) buffer[i] = -1.0f;
+                    }
+                    writer.WriteSamples(buffer, 0, read);
+                }
+            }
+
+            LoadFile(tempFile);
+            File.Delete(tempFile);
+
+            if (wasPlaying) Play();
+        }
     }
     
 

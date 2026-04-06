@@ -14,6 +14,7 @@ namespace EditWave.ViewModels
         private double _currentPosition;
         private double _duration;
         private double _volume;
+        private string _workingFilePath;
         private double _gain;
 
         // TODO: для выделения фрагмента (потом заменить на реальные значения)
@@ -214,9 +215,11 @@ namespace EditWave.ViewModels
         private void ApplyGain(object parameter)
         {
             if (_audioService == null) return;
-            float volume = (float)(Gain / 100);
-            _audioService.SetVolume(volume);
-            MessageBox.Show($"Громкость изменена на {Gain}%");
+            float gainFactor = (float)(Gain / 100.0); 
+            _audioService.ApplyGain(gainFactor);
+            Duration = _audioService.Duration;
+            LoadWaveform();
+            MessageBox.Show($"Усиление применено: {Gain}%");
         }
         private void ApplyReverse(object parameter)
         {
