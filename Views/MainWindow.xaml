@@ -37,6 +37,7 @@
             <Button Command="{Binding PauseCommand}" Content="⏸" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
             <Button Command="{Binding StopCommand}" Content="⏹" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
             <Separator/>
+            <Button Command="{Binding DeleteCommand}" Content="✂ Удалить" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
             <Button Command="{Binding TrimCommand}" Content="✂ Обрезать" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
             <Button Command="{Binding SaveProjectCommand}" Content="💾 Сохранить" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
         </ToolBar>
@@ -58,12 +59,7 @@
                                            Duration="{Binding Duration}"
                                            SelectionChanged="OnWaveformSelectionChanged"
                                            Margin="5"/>
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="5">
-                        <TextBlock Text="0:00" Margin="10,0" Foreground="#333"/>
-                        <TextBlock Text="1:00" Margin="10,0" Foreground="#333"/>
-                        <TextBlock Text="2:00" Margin="10,0" Foreground="#333"/>
-                        <TextBlock Text="3:00" Margin="10,0" Foreground="#333"/>
-                    </StackPanel>
+
                 </Grid>
             </Border>
 
