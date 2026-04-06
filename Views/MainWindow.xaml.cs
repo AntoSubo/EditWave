@@ -19,5 +19,14 @@ namespace EditWave.Views
             InitializeComponent();
             DataContext = new MainViewModel(); // перестать забывать про эту строку, без нее ниче не робит
         }
+
+        private void OnWaveformSelectionChanged(double startSeconds, double endSeconds)
+        {
+            if (DataContext is ViewModels.MainViewModel vm)
+            {
+                vm.SelectionStart = startSeconds;
+                vm.SelectionEnd = endSeconds;
+            }
+        }
     }
 }

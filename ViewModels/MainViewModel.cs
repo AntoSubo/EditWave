@@ -17,9 +17,29 @@ namespace EditWave.ViewModels
         private double _gain;
 
         // TODO: для выделения фрагмента (потом заменить на реальные значения)
-        private double _selectionStart = 0;
-        private double _selectionEnd = 0;
 
+        private double _selectionStart;
+        private double _selectionEnd;
+
+        public double SelectionStart
+        {
+            get => _selectionStart;
+            set
+            {
+                _selectionStart = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double SelectionEnd
+        {
+            get => _selectionEnd;
+            set
+            {
+                _selectionEnd = value;
+                OnPropertyChanged();
+            }
+        }
 
         public string CurrentTime
         {
@@ -83,6 +103,16 @@ namespace EditWave.ViewModels
                 }
             }
         }
+        private float[] _waveformSamples;
+        public float[] WaveformSamples
+        {
+            get => _waveformSamples;
+            set
+            {
+                _waveformSamples = value;
+                OnPropertyChanged();
+            }
+        }
         public ICommand PlayCommand { get; }
         public ICommand PauseCommand { get; }
         public ICommand StopCommand { get; }
@@ -137,16 +167,49 @@ namespace EditWave.ViewModels
         private void Trim(object parameter)
         {
             if (_audioService == null) return;
-            _audioService.Trim(_selectionStart, _selectionEnd);
-            Duration = _audioService.Duration;
-            MessageBox.Show("Фрагмент обрезан", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (SelectionStart >= SelectionEnd)
+            {
+                MessageBox.Show("Сначала выделите фрагмент на волновой форме", "Нет выделения");
+                return;
+            }
+
+            try
+            {
+                _audioService.Trim(SelectionStart, SelectionEnd);
+                Duration = _audioService.Duration;
+                LoadWaveform();
+                SelectionStart = 0;
+                SelectionEnd = 0;
+                MessageBox.Show("Фрагмент обрезан", "Готово");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка");
+            }
         }
+
         private void Delete(object parameter)
         {
             if (_audioService == null) return;
-            _audioService.DeleteSelection(_selectionStart, _selectionEnd);
-            Duration = _audioService.Duration;
-            MessageBox.Show("Фрагмент удалён", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (SelectionStart >= SelectionEnd)
+            {
+                MessageBox.Show("Сначала выделите фрагмент на волновой форме", "Нет выделения");
+                return;
+            }
+
+            try
+            {
+                _audioService.DeleteSelection(SelectionStart, SelectionEnd);
+                Duration = _audioService.Duration;
+                LoadWaveform();
+                SelectionStart = 0;
+                SelectionEnd = 0;
+                MessageBox.Show("Фрагмент удалён", "Готово");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка");
+            }
         }
         private void ApplyGain(object parameter)
         {
@@ -180,7 +243,7 @@ namespace EditWave.ViewModels
         {
             var dialog = new OpenFileDialog();
             dialog.Filter = "Аудио файлы|*.wav;*.mp3|Все файлы|*.*";
-            dialog.Title = "Выберите аудиофайл";
+
             if (dialog.ShowDialog() == true)
             {
                 if (_audioService.LoadFile(dialog.FileName))
@@ -188,20 +251,24 @@ namespace EditWave.ViewModels
                     Duration = _audioService.Duration;
                     CurrentPosition = 0;
                     CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+                    LoadWaveform();
                     MessageBox.Show($"Файл загружен: {System.IO.Path.GetFileName(dialog.FileName)}");
                 }
                 else
                 {
-                    MessageBox.Show("Сегодня никакой музыки (не удалось загрузить файл)");
+                    MessageBox.Show("Не удалось загрузить файл");
                 }
             }
-
         }
         private void ShowAbout(object parameter)
         {
             var aboutWindow = new AboutWindow();
             aboutWindow.Owner = Application.Current.MainWindow;
             aboutWindow.ShowDialog();
+        }
+        private void LoadWaveform()
+        {
+            WaveformSamples = _audioService.GetWaveformSamples();
         }
     }
 }

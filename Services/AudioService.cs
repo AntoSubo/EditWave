@@ -157,76 +157,136 @@ namespace EditWave.Services
         }
         public void Trim(double startSeconds, double endSeconds)
         {
+            if (_audioStream == null) return;
+
             if (startSeconds < 0) startSeconds = 0;
             if (endSeconds > Duration) endSeconds = Duration;
-            if (startSeconds >= endSeconds) return;
+            if (startSeconds >= endSeconds)
+            {
+                MessageBox.Show("Некорректное выделение");
+                return;
+            }
 
-            if (_audioStream == null) return;
             bool wasPlaying = _isPlaying;
             Stop();
 
-            long startByte = (long)(startSeconds * _audioStream.WaveFormat.AverageBytesPerSecond);
-            long endByte = (long)(endSeconds * _audioStream.WaveFormat.AverageBytesPerSecond);
+         
+            _audioStream?.Dispose();
+            _waveOut?.Dispose();
+            _audioStream = null;
+            _waveOut = null;
 
-            long lengthBytes = endByte - startByte;
+            string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
 
-            byte[] buffer = new byte[lengthBytes];
-            _audioStream.Position = startByte;
-            _audioStream.Read(buffer, 0, (int)lengthBytes);
-            string TempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
-            using (var writer = new WaveFileWriter(TempFile, _audioStream.WaveFormat))
+            using (var reader = new AudioFileReader(_currentFilePath))
+            using (var writer = new WaveFileWriter(tempFile, reader.WaveFormat))
             {
-                writer.Write(buffer, 0, buffer.Length);
+                reader.CurrentTime = TimeSpan.FromSeconds(startSeconds);
+
+                var buffer = new byte[8192];
+                long bytesToRead = (long)((endSeconds - startSeconds) * reader.WaveFormat.AverageBytesPerSecond);
+                long bytesRead = 0;
+
+                while (bytesRead < bytesToRead)
+                {
+                    int read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead - bytesRead));
+                    if (read == 0) break;
+                    writer.Write(buffer, 0, read);
+                    bytesRead += read;
+                }
             }
 
-            LoadFile(TempFile);
-            if (wasPlaying)
+       
+            LoadFile(tempFile);
+
+     
+            try
             {
-                Play();
+                File.Delete(tempFile);
             }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Не удалось удалить: {ex.Message}");
+            }
+
+            if (wasPlaying) Play();
         }
 
         public void DeleteSelection(double startSeconds, double endSeconds)
         {
+            if (_audioStream == null) return;
+
             if (startSeconds < 0) startSeconds = 0;
             if (endSeconds > Duration) endSeconds = Duration;
-            if (startSeconds >= endSeconds) return;
-
-            if (_audioStream == null) return;
+            if (startSeconds >= endSeconds)
+            {
+                MessageBox.Show("Некорректное выделение");
+                return;
+            }
 
             bool wasPlaying = _isPlaying;
             Stop();
 
-            long startByte = (long)(startSeconds * _audioStream.WaveFormat.AverageBytesPerSecond);
-            long endByte = (long)(endSeconds * _audioStream.WaveFormat.AverageBytesPerSecond);
+          
+            _audioStream?.Dispose();
+            _waveOut?.Dispose();
+            _audioStream = null;
+            _waveOut = null;
 
-            byte[] firstPart = new byte[startByte];
+            string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
 
-            _audioStream.Position = 0;
-            _audioStream.Read(firstPart, 0, (int)startByte);
-
-            long remainingBytes = _audioStream.Length - endByte;
-            byte[] secondPart = new byte[remainingBytes];
-
-            _audioStream.Position = endByte;
-            _audioStream.Read(secondPart, 0, (int)remainingBytes);
-
-            byte[] result = new byte[firstPart.Length + secondPart.Length];
-            Buffer.BlockCopy(firstPart, 0, result, 0, firstPart.Length);
-
-            Buffer.BlockCopy(secondPart, 0, result, firstPart.Length, secondPart.Length);
-
-            string TempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
-            using (var writer = new WaveFileWriter(TempFile, _audioStream.WaveFormat))
+            using (var reader = new AudioFileReader(_currentFilePath))
+            using (var writer = new WaveFileWriter(tempFile, reader.WaveFormat))
             {
-                writer.Write(result, 0, result.Length);
+                var buffer = new byte[8192];
+
+          
+                reader.CurrentTime = TimeSpan.FromSeconds(0);
+                long bytesToRead = (long)(startSeconds * reader.WaveFormat.AverageBytesPerSecond);
+                long bytesRead = 0;
+
+                while (bytesRead < bytesToRead)
+                {
+                    int read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead - bytesRead));
+                    if (read == 0) break;
+                    writer.Write(buffer, 0, read);
+                    bytesRead += read;
+                }
+
+         
+                bytesToRead = (long)((endSeconds - startSeconds) * reader.WaveFormat.AverageBytesPerSecond);
+                bytesRead = 0;
+                while (bytesRead < bytesToRead)
+                {
+                    int read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead - bytesRead));
+                    if (read == 0) break;
+                    bytesRead += read;
+                }
+
+      
+                bytesToRead = reader.Length - reader.Position;
+                bytesRead = 0;
+                while (bytesRead < bytesToRead)
+                {
+                    int read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead - bytesRead));
+                    if (read == 0) break;
+                    writer.Write(buffer, 0, read);
+                    bytesRead += read;
+                }
             }
 
-            LoadFile(TempFile);
-            if (wasPlaying)
+            LoadFile(tempFile);
+
+            try
             {
-                Play();
+                File.Delete(tempFile);
             }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Не удалось удалить: {ex.Message}");
+            }
+
+            if (wasPlaying) Play();
         }
         public void Export(string filePath)
         {
@@ -242,6 +302,40 @@ namespace EditWave.Services
         }
 
         //todo волновая фкнкция
+
+        public float[] GetWaveformSamples()
+        {
+            if (_audioStream == null) return new float[0];
+
+            using (var reader = new AudioFileReader(_currentFilePath))
+            {
+                var samples = new List<float>();
+                var buffer = new float[1024];
+                int read;
+
+                float max = 0;
+                while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    for (int i = 0; i < read; i++)
+                    {
+                        float abs = Math.Abs(buffer[i]);
+                        if (abs > max) max = abs;
+                        samples.Add(buffer[i]);
+                    }
+                }
+
+                if (max == 0) max = 1;
+
+                for (int i = 0; i < samples.Count; i++)
+                {
+                    samples[i] = samples[i] / max;
+                }
+
+                return samples.ToArray();
+            }
+        }
+
     }
+    
 
 }
