@@ -20,18 +20,16 @@ namespace EditWave.Views
             DataContext = new MainViewModel(); // перестать забывать про эту строку, без нее ниче не робит
         }
 
-        public void OnWaveformSelectionChanged(double startSeconds, double endSeconds)
+        public void OnWaveformSelectionChanged(double startSeconds, double endSeconds) // подумать как бы убрать ее отсюда
         {
            
             if (DataContext is MainViewModel viewModel)
             {
-             
                 viewModel.SelectionStart = startSeconds;
                 viewModel.SelectionEnd = endSeconds;
-
-              
-                System.Diagnostics.Debug.WriteLine($"Выделение в MainWindow: {startSeconds} - {endSeconds}");
             }
         }
     }
 }
+
+//TODO сделать окно красивее, функциональнее, лаконичнее

@@ -160,5 +160,6 @@ namespace EditWave.Views
             if (_selectionRect != null)
                 _selectionRect.Visibility = Visibility.Collapsed;
         }
-    }
+    } 
 }
+// TODO приближение отдаление волны, мб слайдер чтобы ее двигать

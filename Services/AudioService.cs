@@ -12,8 +12,9 @@ using System.Windows;
 namespace EditWave.Services
 
 {
-    public class AudioService
+    public class AudioService : IDisposable
     {
+        private string _tempFilePath;
         private WaveStream _audioStream;
         private WaveOutEvent _waveOut;
         private System.Timers.Timer _positionTimer;
@@ -30,16 +31,34 @@ namespace EditWave.Services
             }
         }
         public event Action PositionChanged;
-        public bool LoadFile(string filePath)
+        public bool LoadFile(string filePath, bool isTemporary = false)
         {
             try
             {
                 Stop();
-
+                if (isTemporary)
+                {
+                    if (!string.IsNullOrEmpty(_tempFilePath) && File.Exists(_tempFilePath))
+                    {
+                        try
+                        {
+                            File.Delete(_tempFilePath);
+                        }
+                        catch(Exception ex) 
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Не удалось удалить старый временный файл: {ex.Message}");
+                        }
+                    }
+                    _tempFilePath = filePath;
+                }
+                else
+                {
+                    _tempFilePath = null; // если файл обычный можно забыть про временный
+                }
                 _audioStream?.Dispose();
                 _waveOut?.Dispose();
                 _currentFilePath = filePath;
-                if (filePath.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+                if (filePath.EndsWith(".mp3"))
                 {
                     _audioStream = new Mp3FileReader(filePath);
                 }
@@ -47,7 +66,6 @@ namespace EditWave.Services
                 {
                     _audioStream = new AudioFileReader(filePath);
                 }
-
                 _waveOut = new WaveOutEvent();
                 _waveOut.Init(_audioStream);
                 Duration = _audioStream.TotalTime.TotalSeconds;
@@ -59,6 +77,35 @@ namespace EditWave.Services
                 MessageBox.Show(ex.Message);
                 return false;
             }
+        }
+        public void CleanTempFile()
+        {
+            if (!string.IsNullOrEmpty(_tempFilePath) && File.Exists(_tempFilePath))
+            {
+                try
+                {
+                    Stop();
+                    _audioStream?.Dispose();
+                    _audioStream = null; 
+                    _waveOut?.Dispose();
+                    _waveOut = null;
+
+                    File.Delete(_tempFilePath);
+                }
+                catch( Exception ex ) 
+                {
+                    System.Diagnostics.Debug.WriteLine($"Не удалось удалить временный файл: {ex.Message}");
+                }
+                _tempFilePath = null;
+            }
+        }
+        public void Dispose()
+        {
+            CleanTempFile();
+            _positionTimer?.Stop();
+            _positionTimer?.Dispose();
+            _audioStream?.Dispose();
+            _waveOut?.Dispose();
         }
         public void Stop()
         {
@@ -82,11 +129,12 @@ namespace EditWave.Services
             if (_isPlaying) return;
 
             _waveOut.Play();
-            _positionTimer?.Stop();
-            _isPlaying = true;
+   
+
             _positionTimer = new System.Timers.Timer(100);
             _positionTimer.Elapsed += OnTimerTick;
             _positionTimer.Start();
+            _isPlaying = true;
         }
         public void Pause()
         {
@@ -197,17 +245,7 @@ namespace EditWave.Services
             }
 
        
-            LoadFile(tempFile);
-
-     
-            try
-            {
-                File.Delete(tempFile);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Не удалось удалить: {ex.Message}");
-            }
+            LoadFile(tempFile, isTemporary: true);
 
             if (wasPlaying) Play();
         }
@@ -366,6 +404,5 @@ namespace EditWave.Services
             if (wasPlaying) Play();
         }
     }
-    
-
 }
+// TODO поправить методы
