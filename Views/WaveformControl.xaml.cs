@@ -9,6 +9,10 @@ namespace EditWave.Views
 {
     public partial class WaveformControl : UserControl
     {
+        private int _startIndex = 0;   
+        private int _endIndex = 0;      
+        private int _totalSamples = 0;   
+        private double _zoomLevel = 1.0;
         public static readonly DependencyProperty SamplesProperty =
             DependencyProperty.Register(nameof(Samples), typeof(float[]), typeof(WaveformControl),
                 new PropertyMetadata(null, OnSamplesChanged));
