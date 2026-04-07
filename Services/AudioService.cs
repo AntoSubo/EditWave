@@ -195,8 +195,8 @@ namespace EditWave.Services
                     }
                 }
             }
-            LoadFile(tempFile);
-           // File.Delete(tempFile);
+            LoadFile(tempFile, isTemporary: true);
+   
             if (wasPlaying)
             {
                 Play();
@@ -313,16 +313,7 @@ namespace EditWave.Services
                 }
             }
 
-            LoadFile(tempFile);
-
-            try
-            {
-                File.Delete(tempFile);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Не удалось удалить: {ex.Message}");
-            }
+            LoadFile(tempFile, isTemporary: true);
 
             if (wasPlaying) Play();
         }
@@ -398,8 +389,7 @@ namespace EditWave.Services
                 }
             }
 
-            LoadFile(tempFile);
-            File.Delete(tempFile);
+            LoadFile(tempFile, isTemporary: true);
 
             if (wasPlaying) Play();
         }

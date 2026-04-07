@@ -191,7 +191,6 @@ namespace EditWave.ViewModels
 
         private void Delete(object parameter)
         {
-            if (_audioService == null) return;
             if (SelectionStart >= SelectionEnd)
             {
                 MessageBox.Show("Сначала выделите фрагмент на волновой форме", "Нет выделения");
@@ -272,6 +271,10 @@ namespace EditWave.ViewModels
         private void LoadWaveform()
         {
             WaveformSamples = _audioService.GetWaveformSamples();
+        }
+        public void Clean(object parameter)
+        {
+            _audioService.Dispose();
         }
     }
 }
