@@ -1,13 +1,10 @@
 ﻿using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using System;
 using System.IO;
-using System.Timers;
 using System.Linq;
 using System.Text;
-using NAudio.Wave.SampleProviders;
-using System.Threading;
-using System.Threading.Tasks;
-
+using System.Windows.Threading;
 using System.Windows;
 namespace EditWave.Services
 
@@ -17,7 +14,8 @@ namespace EditWave.Services
         private string _tempFilePath;
         private WaveStream _audioStream;
         private WaveOutEvent _waveOut;
-        private System.Timers.Timer _positionTimer;
+        //  private System.Timers.Timer _positionTimer;
+        private DispatcherTimer _positionTimer;
         private bool _isPlaying;
         private string _currentFilePath;
         public bool IsPlaying => _isPlaying;
@@ -103,7 +101,7 @@ namespace EditWave.Services
         {
             CleanTempFile();
             _positionTimer?.Stop();
-            _positionTimer?.Dispose();
+    
             _audioStream?.Dispose();
             _waveOut?.Dispose();
         }
@@ -129,12 +127,17 @@ namespace EditWave.Services
             if (_isPlaying) return;
 
             _waveOut.Play();
-   
-
-            _positionTimer = new System.Timers.Timer(100);
-            _positionTimer.Elapsed += OnTimerTick;
-            _positionTimer.Start();
             _isPlaying = true;
+
+            //_positionTimer = new System.Timers.Timer(100);
+            //_positionTimer.Elapsed += OnTimerTick;
+            //_positionTimer.Start();
+            //_isPlaying = true;
+            // Создаём UI-таймер вместо обычного
+            _positionTimer = new DispatcherTimer();
+            _positionTimer.Interval = TimeSpan.FromMilliseconds(100);
+            _positionTimer.Tick += OnTimerTick;
+            _positionTimer.Start();
         }
         public void Pause()
         {
@@ -161,7 +164,7 @@ namespace EditWave.Services
             _audioStream.CurrentTime = TimeSpan.FromSeconds(position);
             PositionChanged?.Invoke();
         }
-        private void OnTimerTick(object sender, ElapsedEventArgs args)
+        private void OnTimerTick(object sender, EventArgs args)
         {
             if (_isPlaying && _audioStream != null)
             {
