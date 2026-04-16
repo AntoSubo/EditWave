@@ -378,6 +378,12 @@ namespace EditWave.Services
         }
         public void ApplyGain(float gainFactor)
         {
+
+            if (_audioStream == null)
+            {
+                System.Diagnostics.Debug.WriteLine("_audioStream == null");
+                return;
+            }
             if (_audioStream == null) return;
             bool wasPlaying = _isPlaying;
             Stop();

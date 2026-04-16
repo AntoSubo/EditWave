@@ -264,7 +264,7 @@ namespace EditWave.ViewModels
         private void ApplyGain(object parameter)
         {
             if (_audioService == null) return;
-            float gainFactor = (float)(Gain / 100.0); 
+            float gainFactor = (float)(Gain / 100.0);
             _audioService.ApplyGain(gainFactor);
             Duration = _audioService.Duration;
             LoadWaveform();
