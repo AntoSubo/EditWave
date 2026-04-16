@@ -83,7 +83,13 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{Binding Name}" Foreground="#333"/>
-                                        <Button Grid.Column="1" Content="X" Background="Transparent" Foreground="Red" BorderThickness="0"/>
+                                        <Button Grid.Column="1" 
+                        Content="X" 
+                        Background="Transparent" 
+                        Foreground="Red" 
+                        BorderThickness="0"
+                        Click="DeleteProject_Click"
+                        Tag="{Binding Id}"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>

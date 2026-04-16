@@ -1,10 +1,13 @@
-﻿using EditWave.Services;
+﻿using EditWave.Models;
+using EditWave.Services;
+using EditWave.Views;
+using LiteDB;
+using Microsoft.Win32;
 using System;
+using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
-using Microsoft.Win32;
-using EditWave.Views;
-
 namespace EditWave.ViewModels
 {
     public class MainViewModel : ViewModelBase
@@ -16,12 +19,33 @@ namespace EditWave.ViewModels
         private double _volume;
         private string _workingFilePath;
         private double _gain;
-
-        // TODO: для выделения фрагмента (потом заменить на реальные значения)
-
+        private readonly ProjectService _projectService;
+        private ObservableCollection<Project> _projectsList;
+        private Project _selectedProject;
+        public ObservableCollection<Project> ProjectsList
+        {
+            get => _projectsList;
+            set
+            {
+                _projectsList = value;
+                OnPropertyChanged();
+            }
+        }
+        public Project SelectedProject
+        {
+            get => _selectedProject;
+            set
+            {
+                _selectedProject = value;
+                OnPropertyChanged();
+                if (value != null)
+                {
+                    LoadProject(value);
+                }
+            }
+        }
         private double _selectionStart;
         private double _selectionEnd;
-
         public double SelectionStart
         {
             get => _selectionStart;
@@ -31,7 +55,6 @@ namespace EditWave.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public double SelectionEnd
         {
             get => _selectionEnd;
@@ -41,7 +64,6 @@ namespace EditWave.ViewModels
                 OnPropertyChanged();
             }
         }
-
         public string CurrentTime
         {
             get => _currentTime;
@@ -141,6 +163,33 @@ namespace EditWave.ViewModels
             OpenProjectCommand = new RelayCommand(OpenProject);
             ShowAboutCommand = new RelayCommand(ShowAbout);
             ExitCommand = new RelayCommand(Exit);
+            _projectsList = new ObservableCollection<Project>();
+            _projectService = new ProjectService();
+            LoadProjectsFromDb();
+        }
+        private void LoadProjectsFromDb()
+        {
+            var projects = _projectService.GetAllProjects();
+            ProjectsList.Clear();
+            foreach (var project in projects)
+            {
+                ProjectsList.Add(project);
+            }
+        }
+        private void LoadProject(Project project)
+        {
+            if (_audioService.LoadFile(project.FilePath))
+            {
+                Duration = _audioService.Duration;
+                CurrentPosition = 0;
+                CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+                LoadWaveform();
+                MessageBox.Show($"Проект загружен: {project.Name}");
+            }
+            else
+            {
+                MessageBox.Show("Не удалось загрузить файл проекта");
+            }
         }
         private void Exit(object parameter)
         {
@@ -188,7 +237,6 @@ namespace EditWave.ViewModels
                 MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка");
             }
         }
-
         private void Delete(object parameter)
         {
             if (SelectionStart >= SelectionEnd)
@@ -229,17 +277,41 @@ namespace EditWave.ViewModels
         }
         private void SaveProject(object parameter)
         {
-            if (_audioService == null) return;
-
-            var dialog = new SaveFileDialog();
-            dialog.Filter = "WAV файлы|*.wav|MP3 файлы|*.mp3|Все файлы|*.*";
-            dialog.Title = "Сохранить аудиофайл";
-
-            if (dialog.ShowDialog() == true)
+            if (_audioService?.HasFile != true)
             {
-                _audioService.Export(dialog.FileName);
-                MessageBox.Show($"Файл сохранён: {System.IO.Path.GetFileName(dialog.FileName)}", "Сохранение", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Сначала загрузите аудиофайл");
+                return;
             }
+
+            var inputDialog = new InputDialog("Название проекта", "Введите название проекта:");
+            if (inputDialog.ShowDialog() != true || string.IsNullOrEmpty(inputDialog.Answer))
+                return;
+
+            string projectName = inputDialog.Answer;
+            string currentFilePath = _audioService.GetCurrentFilePath();
+            bool isTemporary = _audioService.IsTemporaryFile();
+            if (isTemporary)
+            {
+                string savePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                                               "EditWave",
+                                               projectName + ".wav");
+
+                Directory.CreateDirectory(Path.GetDirectoryName(savePath));
+
+              
+                File.Copy(currentFilePath, savePath, true);
+                currentFilePath = savePath;
+
+            }
+            var project = new Project
+            {
+                Name = projectName,
+                FilePath = currentFilePath,
+                LastModified = DateTime.Now
+            };
+
+            _projectService.SaveProject(project);
+            LoadProjectsFromDb();
         }
         private void OpenProject(object parameter)
         {
@@ -275,6 +347,17 @@ namespace EditWave.ViewModels
         public void Clean(object parameter)
         {
             _audioService.Dispose();
+        }
+        public void DeleteProject(int projectId)
+        {
+            var result = MessageBox.Show("Удалить проект из списка? Аудиофайл останется на диске.",
+                "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _projectService.DeleteProject(projectId);
+                LoadProjectsFromDb();
+            }
         }
     }
 }

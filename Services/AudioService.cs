@@ -11,6 +11,15 @@ namespace EditWave.Services
 {
     public class AudioService : IDisposable
     {
+        public string GetCurrentFilePath()
+        {
+            return _currentFilePath;
+        }
+
+        public bool IsTemporaryFile()
+        {
+            return _tempFilePath != null;
+        }
         private string _tempFilePath;
         private WaveStream _audioStream;
         private WaveOutEvent _waveOut;
@@ -18,6 +27,7 @@ namespace EditWave.Services
         private DispatcherTimer _positionTimer;
         private bool _isPlaying;
         private string _currentFilePath;
+        public bool HasFile => !string.IsNullOrEmpty(_currentFilePath); // чтобы юзер не тыкал на сохранить до вообще появления какого либо файла
         public bool IsPlaying => _isPlaying;
         public double Duration { get; private set; }
         public double CurrentPosition

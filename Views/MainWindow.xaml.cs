@@ -29,6 +29,19 @@ namespace EditWave.Views
                 viewModel.SelectionEnd = endSeconds;
             }
         }
+
+        private void DeleteProject_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button != null && button.Tag is int projectId)
+            {
+                if (DataContext is MainViewModel vm)
+                {
+                    vm.DeleteProject(projectId);
+                }
+            }
+        }
+    
         //private void MainWindow_Closing(object parameter, System.ComponentModel.CancelEventArgs e)
         //{
         //    if (DataContext is MainViewModel viewModel)
