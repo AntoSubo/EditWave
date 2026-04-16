@@ -2,7 +2,9 @@
 using EditWave.Services;
 using EditWave.Views;
 using LiteDB;
+using Microsoft.VisualBasic;
 using Microsoft.Win32;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -277,17 +279,15 @@ namespace EditWave.ViewModels
         }
         private void SaveProject(object parameter)
         {
-            if (_audioService?.HasFile != true)
+            if (_audioService == null || string.IsNullOrEmpty(_audioService.GetCurrentFilePath()))
             {
-                MessageBox.Show("Сначала загрузите аудиофайл");
+                MessageBox.Show("Сначала загрузите аудиофайл", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
-            var inputDialog = new InputDialog("Название проекта", "Введите название проекта:");
-            if (inputDialog.ShowDialog() != true || string.IsNullOrEmpty(inputDialog.Answer))
+            string projectName = Interaction.InputBox("Введите название проекта:", "Сохранение проекта", "Мой проект");
+            if (string.IsNullOrWhiteSpace(projectName))
                 return;
 
-            string projectName = inputDialog.Answer;
             string currentFilePath = _audioService.GetCurrentFilePath();
             bool isTemporary = _audioService.IsTemporaryFile();
             if (isTemporary)
@@ -295,14 +295,11 @@ namespace EditWave.ViewModels
                 string savePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                                                "EditWave",
                                                projectName + ".wav");
-
                 Directory.CreateDirectory(Path.GetDirectoryName(savePath));
-
-              
                 File.Copy(currentFilePath, savePath, true);
                 currentFilePath = savePath;
-
             }
+
             var project = new Project
             {
                 Name = projectName,
@@ -312,6 +309,7 @@ namespace EditWave.ViewModels
 
             _projectService.SaveProject(project);
             LoadProjectsFromDb();
+            MessageBox.Show($"Проект \"{projectName}\" сохранён!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         private void OpenProject(object parameter)
         {

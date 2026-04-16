@@ -12,8 +12,12 @@ namespace EditWave.Models
         public string Name { get; set; }
 
         public string FilePath { get; set; }
-
-
+        public DateTime CreatedAt { get; set; }  
+        public DateTime LastModified { get; set; }
+        public Project()
+        {
+            CreatedAt = DateTime.Now;
+            LastModified = DateTime.Now;
+        }
     }
 }
-// TODO добавить базу данных
