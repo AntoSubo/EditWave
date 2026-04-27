@@ -29,7 +29,7 @@
 
   <ItemGroup>
     <Resource Include="lame.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
   </ItemGroup>
 
