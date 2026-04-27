@@ -1,11 +1,13 @@
-﻿using NAudio.Wave;
+﻿using NAudio.Lame;
+using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Windows.Threading;
 using System.Windows;
+using System.Windows.Threading;
 namespace EditWave.Services
 
 {
@@ -39,11 +41,21 @@ namespace EditWave.Services
             }
         }
         public event Action PositionChanged;
+
         public bool LoadFile(string filePath, bool isTemporary = false)
         {
             try
             {
                 Stop();
+
+                // Если загружаем MP3 и это не временный файл, конвертируем во временный WAV
+                if (!isTemporary && filePath.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+                {
+                    string wavPath = ConvertMp3ToWav(filePath);
+                    filePath = wavPath;
+                    isTemporary = true;
+                }
+
                 if (isTemporary)
                 {
                     if (!string.IsNullOrEmpty(_tempFilePath) && File.Exists(_tempFilePath))
@@ -52,7 +64,7 @@ namespace EditWave.Services
                         {
                             File.Delete(_tempFilePath);
                         }
-                        catch(Exception ex) 
+                        catch (Exception ex)
                         {
                             System.Diagnostics.Debug.WriteLine($"Не удалось удалить старый временный файл: {ex.Message}");
                         }
@@ -143,7 +155,7 @@ namespace EditWave.Services
             //_positionTimer.Elapsed += OnTimerTick;
             //_positionTimer.Start();
             //_isPlaying = true;
-            // Создаём UI-таймер вместо обычного
+            //создаём UI-таймер вместо обычного
             _positionTimer = new DispatcherTimer();
             _positionTimer.Interval = TimeSpan.FromMilliseconds(100);
             _positionTimer.Tick += OnTimerTick;
@@ -262,7 +274,16 @@ namespace EditWave.Services
 
             if (wasPlaying) Play();
         }
-
+        private string ConvertMp3ToWav(string mp3Path) // так как с мп3 нормально не работает и надо сразу конвертировать чтоб работала громкость и тп
+        {
+            string tempWav = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
+            using (var reader = new Mp3FileReader(mp3Path))
+            using (var writer = new WaveFileWriter(tempWav, reader.WaveFormat))
+            {
+                reader.CopyTo(writer);
+            }
+            return tempWav;
+        }
         public void DeleteSelection(double startSeconds, double endSeconds)
         {
             if (_audioStream == null) return;
@@ -333,16 +354,50 @@ namespace EditWave.Services
         public void Export(string filePath)
         {
             if (_audioStream == null) return;
+
             bool wasPlaying = _isPlaying;
             Stop();
 
-            File.Copy(_currentFilePath, filePath, true);
-            if (wasPlaying)
+            string extension = Path.GetExtension(filePath).ToLower();
+            try
             {
-                Play();
+                if (extension == ".mp3")
+                {
+                    string tempWav = Path.GetTempFileName() + ".wav";
+                    File.Copy(_currentFilePath, tempWav, true);
+
+                    string lamePath = "lame.exe";
+                    string arguments = $"-b 192 \"{tempWav}\" \"{filePath}\"";
+
+                    var process = new Process();
+                    process.StartInfo.FileName = lamePath;
+                    process.StartInfo.Arguments = arguments;
+                    process.StartInfo.UseShellExecute = false;
+                    process.StartInfo.CreateNoWindow = true;
+                    process.Start();
+                    process.WaitForExit();
+
+                    File.Delete(tempWav);
+                }
+                else if (extension == ".wav")
+                {
+                    File.Copy(_currentFilePath, filePath, true);
+                }
+                else
+                {
+                    MessageBox.Show("Неподдерживаемый формат. Используйте .wav или .mp3");
+                }
+                MessageBox.Show("Экспорт завершён: " + Path.GetFileName(filePath));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при экспорте: {ex.Message}");
+            }
+            finally
+            {
+                if (wasPlaying) Play();
             }
         }
-
         //todo волновая фкнкция
 
         public float[] GetWaveformSamples()

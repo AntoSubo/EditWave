@@ -142,6 +142,7 @@ namespace EditWave.ViewModels
         public ICommand PauseCommand { get; }
         public ICommand StopCommand { get; }
         public ICommand TrimCommand { get; }
+        public ICommand ExportCommand { get; }
         public ICommand DeleteCommand { get; }
         public ICommand ApplyGainCommand { get; }
         public ICommand ApplyReverseCommand { get; }
@@ -165,6 +166,7 @@ namespace EditWave.ViewModels
             OpenProjectCommand = new RelayCommand(OpenProject);
             ShowAboutCommand = new RelayCommand(ShowAbout);
             ExitCommand = new RelayCommand(Exit);
+            ExportCommand = new RelayCommand(ExportAudio);
             _projectsList = new ObservableCollection<Project>();
             _projectService = new ProjectService();
             LoadProjectsFromDb();
@@ -276,6 +278,24 @@ namespace EditWave.ViewModels
             _audioService.ApplyReverse();
             Duration = _audioService.Duration;
             MessageBox.Show("Реверс применён", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        private void ExportAudio(object parameter)
+        {
+            if (_audioService == null || string.IsNullOrEmpty(_audioService.GetCurrentFilePath()))
+            {
+                MessageBox.Show("Нет аудио для экспорта");
+                return;
+            }
+
+            var dialog = new SaveFileDialog();
+            dialog.Filter = "WAV файлы|*.wav|MP3 файлы|*.mp3";
+            dialog.Title = "Экспорт аудио";
+
+            if (dialog.ShowDialog() == true)
+            {
+                _audioService.Export(dialog.FileName);
+                MessageBox.Show("Экспорт завершён");
+            }
         }
         private void SaveProject(object parameter)
         {

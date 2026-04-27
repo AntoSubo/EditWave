@@ -15,17 +15,9 @@
         <Menu Grid.Row="0" Background="#E0E0E0" Foreground="#333">
             <MenuItem Header="Файл">
                 <MenuItem Header="Открыть" Command="{Binding OpenProjectCommand}"/>
-                <MenuItem Header="Сохранить" Command="{Binding SaveProjectCommand}"/>
+                <MenuItem Header="Экспорт аудио" Command="{Binding ExportCommand}"/>
                 <Separator/>
                 <MenuItem Header="Выход" Command="{Binding ExitCommand}"/>
-            </MenuItem>
-            <MenuItem Header="Правка">
-                <MenuItem Header="Обрезать" Command="{Binding TrimCommand}"/>
-                <MenuItem Header="Удалить" Command="{Binding DeleteCommand}"/>
-            </MenuItem>
-            <MenuItem Header="Эффекты">
-                <MenuItem Header="Усиление" Command="{Binding ApplyGainCommand}"/>
-                <MenuItem Header="Реверс" Command="{Binding ApplyReverseCommand}"/>
             </MenuItem>
             <MenuItem Header="Справка">
                 <MenuItem Header="О программе" Command="{Binding ShowAboutCommand}"/>
