@@ -20,5 +20,10 @@ namespace EditWave.Views
         {
             InitializeComponent();
         }
+
+        private void OkButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
     }
 }

@@ -1,12 +1,100 @@
 ﻿<Window x:Class="EditWave.Views.AboutWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:EditWave.Views"
-        mc:Ignorable="d"
-        Title="AboutWindow" Height="450" Width="800">
-    <Grid>
-        
+        Title="О программе" 
+        Height="350" 
+        Width="450"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#F5F5F5">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+      
+        <TextBlock Grid.Row="0" 
+                   Text="🎵 EditWave" 
+                   FontSize="28" 
+                   FontWeight="Bold" 
+                   Foreground="#FF4081"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,10"/>
+
+    
+        <TextBlock Grid.Row="1" 
+                   Text="Версия 1.0" 
+                   FontSize="16" 
+                   Foreground="#555"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,20"/>
+
+      
+        <Separator Grid.Row="2" 
+                   Background="#CCC" 
+                   Margin="0,5,0,15"/>
+
+    
+        <StackPanel Grid.Row="3" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Center"
+                    Margin="0,5">
+            <TextBlock Text="Автор: " 
+                       FontSize="14" 
+                       FontWeight="Bold"
+                       Foreground="#333"/>
+            <TextBlock Text="Семьянова Маргарита Евгеньевна" 
+                       FontSize="14" 
+                       Foreground="#555"/>
+        </StackPanel>
+
+      
+        <StackPanel Grid.Row="4" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Center"
+                    Margin="0,5">
+            <TextBlock Text="Группа: " 
+                       FontSize="14" 
+                       FontWeight="Bold"
+                       Foreground="#333"/>
+            <TextBlock Text="2307б1" 
+                       FontSize="14" 
+                       Foreground="#555"/>
+        </StackPanel>
+
+    
+        <TextBlock Grid.Row="5" 
+                   Text="Редактор аудиофайлов с поддержкой WAV и MP3"
+                   FontSize="12"
+                   Foreground="#888"
+                   HorizontalAlignment="Center"
+                   Margin="0,30,0,10"/>
+
+     
+        <Button Grid.Row="6" 
+                Content="OK" 
+                Width="100" 
+                Height="35"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,10"
+                Background="#FF4081" 
+                Foreground="White"
+                BorderThickness="0"
+                Cursor="Hand"
+                Click="OkButton_Click"
+                IsDefault="True">
+            <Button.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="5"/>
+                </Style>
+            </Button.Resources>
+        </Button>
     </Grid>
 </Window>

@@ -375,7 +375,7 @@ namespace EditWave.Services
                 if (wasPlaying) Play();
             }
         }
-        //todo волновая фкнкция
+   
 
         public float[] GetWaveformSamples()
         {
@@ -444,6 +444,22 @@ namespace EditWave.Services
 
             if (wasPlaying) Play();
         }
+        //NAudio имеет класс WaveFormat и позволяет изменять скорость через WaveFormatConversionStream с новым sample rate
+
+        public void ChangeSpeed(float speedFactor)
+        {
+            var newFormat = new WaveFormat(
+        (int)(_audioStream.WaveFormat.SampleRate * speedFactor),
+        _audioStream.WaveFormat.BitsPerSample,
+        _audioStream.WaveFormat.Channels);
+
+            using (var converter = new WaveFormatConversionStream(newFormat, _audioStream))
+            {
+                string tempFile = Path.GetTempFileName() + ".wav";
+                WaveFileWriter.CreateWaveFile(tempFile, converter);
+                LoadFile(tempFile, isTemporary: true);
+            }
+        }
     }
 }
-// TODO поправить методы
+// TODO ускорение замедление добавление новых кусков обдумать как делать
