@@ -32,6 +32,8 @@
             <Button Command="{Binding DeleteCommand}" Content="✂ Удалить" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
             <Button Command="{Binding TrimCommand}" Content="✂ Обрезать" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
             <Button Command="{Binding SaveProjectCommand}" Content="💾 Сохранить" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
+            <Button Command="{Binding SpeedUpCommand}" Content="⏩ Ускорить" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
+            <Button Command="{Binding SlowDownCommand}" Content="⏪ Замедлить" Margin="2" Padding="5" Background="White" Foreground="#FF4081"/>
         </ToolBar>
 
         <Grid Grid.Row="2">

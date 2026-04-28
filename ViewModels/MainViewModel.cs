@@ -149,6 +149,8 @@ namespace EditWave.ViewModels
         public ICommand SaveProjectCommand { get; }
         public ICommand OpenProjectCommand { get; }
         public ICommand ShowAboutCommand { get; }
+        public ICommand SpeedUpCommand { get; }
+        public ICommand SlowDownCommand { get; }
         public ICommand ExitCommand { get; }
 
         public MainViewModel()
@@ -160,6 +162,8 @@ namespace EditWave.ViewModels
             StopCommand = new RelayCommand(Stop);
             TrimCommand = new RelayCommand(Trim);
             DeleteCommand = new RelayCommand(Delete);
+            SpeedUpCommand = new RelayCommand(SpeedUp);
+            SlowDownCommand = new RelayCommand(SlowDown);
             ApplyGainCommand = new RelayCommand(ApplyGain);
             ApplyReverseCommand = new RelayCommand(ApplyReverse);
             SaveProjectCommand = new RelayCommand(SaveProject);
@@ -179,6 +183,23 @@ namespace EditWave.ViewModels
             {
                 ProjectsList.Add(project);
             }
+        }
+        private void SpeedUp(object parameter)
+        {
+            if (_audioService == null) return;
+            _audioService.ChangeSpeed(1.5f); 
+            Duration = _audioService.Duration;
+            LoadWaveform();
+            MessageBox.Show("Скорость увеличена в 1.5 раза");
+        }
+
+        private void SlowDown(object parameter)
+        {
+            if (_audioService == null) return;
+            _audioService.ChangeSpeed(0.75f); 
+            Duration = _audioService.Duration;
+            LoadWaveform();
+            MessageBox.Show("Скорость уменьшена до 75%");
         }
         private void LoadProject(Project project)
         {

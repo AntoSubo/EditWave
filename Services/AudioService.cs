@@ -448,16 +448,41 @@ namespace EditWave.Services
 
         public void ChangeSpeed(float speedFactor)
         {
-            var newFormat = new WaveFormat(
-        (int)(_audioStream.WaveFormat.SampleRate * speedFactor),
-        _audioStream.WaveFormat.BitsPerSample,
-        _audioStream.WaveFormat.Channels);
-
-            using (var converter = new WaveFormatConversionStream(newFormat, _audioStream))
+            try
             {
-                string tempFile = Path.GetTempFileName() + ".wav";
-                WaveFileWriter.CreateWaveFile(tempFile, converter);
+                if (_audioStream == null || speedFactor <= 0)
+                {
+                    MessageBox.Show("Нет аудио или неверный коэффициент");
+                    return;
+                }
+
+                bool wasPlaying = _isPlaying;
+                Stop();
+
+                var oldFormat = _audioStream.WaveFormat;
+                int newSampleRate = (int)(oldFormat.SampleRate * speedFactor);
+                var newFormat = new WaveFormat(newSampleRate, oldFormat.BitsPerSample, oldFormat.Channels);
+
+                string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
+
+                using (var reader = new AudioFileReader(_currentFilePath))
+                using (var converter = new WaveFormatConversionStream(newFormat, reader))
+                using (var writer = new WaveFileWriter(tempFile, converter.WaveFormat))
+                {
+                    byte[] buffer = new byte[65536];
+                    int bytesRead;
+                    while ((bytesRead = converter.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        writer.Write(buffer, 0, bytesRead);
+                    }
+                }
+
                 LoadFile(tempFile, isTemporary: true);
+                if (wasPlaying) Play();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка в ChangeSpeed: {ex.Message}\n{ex.StackTrace}");
             }
         }
     }
