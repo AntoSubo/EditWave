@@ -151,12 +151,16 @@ namespace EditWave.ViewModels
         public ICommand ShowAboutCommand { get; }
         public ICommand SpeedUpCommand { get; }
         public ICommand SlowDownCommand { get; }
+        public ICommand DeleteProjectCommand { get; }
         public ICommand ExitCommand { get; }
+        public ICommand RenameProjectCommand { get; }
 
         public MainViewModel()
         {
+            RenameProjectCommand = new RelayCommand(RenameProject);
             _audioService = new AudioService();
             _audioService.PositionChanged += OnPositionChanged;
+            DeleteProjectCommand = new RelayCommand(DeleteProject);
             PlayCommand = new RelayCommand(Play);
             PauseCommand = new RelayCommand(Pause);
             StopCommand = new RelayCommand(Stop);
@@ -174,6 +178,65 @@ namespace EditWave.ViewModels
             _projectsList = new ObservableCollection<Project>();
             _projectService = new ProjectService();
             LoadProjectsFromDb();
+        }
+        private void DeleteProject(object parameter)
+        {
+            if (parameter is int projectId)
+            {
+                var project = _projectService.GetProjectById(projectId);
+                if (project == null) return;
+
+                var result = MessageBox.Show($"Удалить проект \"{project.Name}\" из списка? Аудиофайл останется на диске.",
+                    "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    _projectService.DeleteProject(projectId);
+                    LoadProjectsFromDb();
+
+                    if (SelectedProject?.Id == projectId)
+                    {
+                        SelectedProject = null;
+                    }
+
+                    MessageBox.Show("Проект удалён");
+                }
+            }
+        }
+        private void RenameProject(object parameter)
+        {
+            if (parameter is Project project)
+            {
+                string newName = Interaction.InputBox("Введите новое название проекта:", "Переименование", project.Name);
+                if (!string.IsNullOrWhiteSpace(newName) && newName != project.Name)
+                {
+                    var existing = _projectService.GetAllProjects().FirstOrDefault(p => p.Name == newName);
+                    if (existing != null && existing.Id != project.Id)
+                    {
+                        MessageBox.Show("Проект с таким названием уже существует");
+                        return;
+                    }
+
+                    string oldPath = project.FilePath;
+                    string folder = Path.GetDirectoryName(oldPath);
+                    string newPath = Path.Combine(folder, newName + ".wav");
+
+                    if (File.Exists(oldPath))
+                    {
+                        File.Move(oldPath, newPath);
+                    }
+
+                    project.Name = newName;
+                    project.FilePath = newPath;
+                    project.LastModified = DateTime.Now;
+                    _projectService.SaveProject(project);
+
+                    LoadProjectsFromDb();
+                    SelectedProject = project;
+
+                    MessageBox.Show($"Проект переименован в \"{newName}\"");
+                }
+            }
         }
         private void LoadProjectsFromDb()
         {
@@ -325,30 +388,54 @@ namespace EditWave.ViewModels
                 MessageBox.Show("Сначала загрузите аудиофайл", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
             string projectName = Interaction.InputBox("Введите название проекта:", "Сохранение проекта", "Мой проект");
-            if (string.IsNullOrWhiteSpace(projectName))
-                return;
+            if (string.IsNullOrWhiteSpace(projectName)) return;
 
             string currentFilePath = _audioService.GetCurrentFilePath();
             bool isTemporary = _audioService.IsTemporaryFile();
-            if (isTemporary)
+
+            // определяем папку для проектов
+            string projectFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Projects");
+            Directory.CreateDirectory(projectFolder);
+            string savePath = Path.Combine(projectFolder, projectName + ".wav");
+
+            // проверяем, существует ли уже проект с таким названием
+            var existingProject = _projectService.GetAllProjects().FirstOrDefault(p => p.Name == projectName);
+
+            if (existingProject != null)
             {
-                string savePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                                               "EditWave",
-                                               projectName + ".wav");
-                Directory.CreateDirectory(Path.GetDirectoryName(savePath));
-                File.Copy(currentFilePath, savePath, true);
-                currentFilePath = savePath;
+                var result = MessageBox.Show($"Проект \"{projectName}\" уже существует. Перезаписать?",
+                    "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (result != MessageBoxResult.Yes) return;
+
+                // обновляем существующий проект
+                if (File.Exists(existingProject.FilePath))
+                {
+                    File.Delete(existingProject.FilePath);
+                }
+                existingProject.FilePath = savePath;
+                existingProject.LastModified = DateTime.Now;
+                _projectService.SaveProject(existingProject);
+            }
+            else
+            {
+                // создаём новый проект
+                var project = new Project
+                {
+                    Name = projectName,
+                    FilePath = savePath,
+                    LastModified = DateTime.Now
+                };
+                _projectService.SaveProject(project);
             }
 
-            var project = new Project
+            // копируем аудиофайл
+            if (isTemporary || !File.Exists(savePath))
             {
-                Name = projectName,
-                FilePath = currentFilePath,
-                LastModified = DateTime.Now
-            };
+                File.Copy(currentFilePath, savePath, true);
+            }
 
-            _projectService.SaveProject(project);
             LoadProjectsFromDb();
             MessageBox.Show($"Проект \"{projectName}\" сохранён!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
         }

@@ -75,15 +75,25 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{Binding Name}" Foreground="#333"/>
                                         <Button Grid.Column="1" 
-                        Content="X" 
-                        Background="Transparent" 
-                        Foreground="Red" 
-                        BorderThickness="0"
-                        Click="DeleteProject_Click"
-                        Tag="{Binding Id}"/>
+                                                Content="X" 
+                                                Background="Transparent" 
+                                                Foreground="Red" 
+                                                BorderThickness="0"
+                                                Command="{Binding DataContext.DeleteProjectCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                CommandParameter="{Binding Id}"
+                                                Margin="0,0,0,0"/>
+                                        <Button Grid.Column="2" 
+                                                Content="✏️" 
+                                                Background="Transparent" 
+                                                Foreground="#333" 
+                                                BorderThickness="0"
+                                                Command="{Binding DataContext.RenameProjectCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                CommandParameter="{Binding}"
+                                                Margin="0,0,5,0"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
