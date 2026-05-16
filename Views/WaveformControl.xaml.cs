@@ -9,10 +9,6 @@ namespace EditWave.Views
 {
     public partial class WaveformControl : UserControl
     {
-        private double _zoom = 1.0;
-        private int _visibleStart;
-        private int _visibleEnd;
-
         public static readonly DependencyProperty SamplesProperty =
             DependencyProperty.Register(nameof(Samples), typeof(float[]), typeof(WaveformControl),
                 new PropertyMetadata(null, OnSamplesChanged));
@@ -33,25 +29,29 @@ namespace EditWave.Views
             set => SetValue(DurationProperty, value);
         }
 
+        public static readonly DependencyProperty PlaybackPositionProperty =
+            DependencyProperty.Register(nameof(PlaybackPosition), typeof(double), typeof(WaveformControl),
+                new PropertyMetadata(0.0, OnPlaybackPositionChanged));
+
+        public double PlaybackPosition
+        {
+            get => (double)GetValue(PlaybackPositionProperty);
+            set => SetValue(PlaybackPositionProperty, value);
+        }
+
         public event Action<double, double> SelectionChanged;
 
         private bool _isSelecting;
         private double _selectionStartX;
         private double _selectionEndX;
         private Rectangle _selectionRect;
-        private bool _isPanning;
-        private double _panStartX;
-        private int _panStartIndex;
+        private float[] _displaySamples;
 
         public WaveformControl()
         {
             InitializeComponent();
             Loaded += OnLoaded;
-            SizeChanged += (_, __) => UpdateVisibleRange();
-            MouseWheel += OnMouseWheel;
-            MouseRightButtonDown += OnRightMouseDown;
-            MouseMove += OnMouseMovePan;
-            MouseRightButtonUp += OnRightMouseUp;
+            SizeChanged += (_, __) => Redraw();
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -62,126 +62,69 @@ namespace EditWave.Views
                 Visibility = Visibility.Collapsed
             };
             WaveCanvas.Children.Add(_selectionRect);
+            if (Samples != null && Samples.Length > 0)
+            {
+                PrepareDisplaySamples();
+                Redraw();
+            }
         }
 
         private static void OnSamplesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var control = (WaveformControl)d;
-            control._zoom = 1.0;
-            control.UpdateVisibleRange();
+            control.PrepareDisplaySamples();
             control.Redraw();
         }
 
-        private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+        private static void OnPlaybackPositionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            if (Keyboard.Modifiers == ModifierKeys.Control)
+            var control = (WaveformControl)d;
+            control.UpdatePlaybackCursor((double)e.NewValue);
+        }
+
+        private void PrepareDisplaySamples()
+        {
+            if (Samples == null || Samples.Length == 0)
             {
-                double oldZoom = _zoom;
-                if (e.Delta > 0)
-                    _zoom *= 1.2;
-                else
-                    _zoom /= 1.2;
-                _zoom = Math.Max(1.0, Math.Min(50.0, _zoom));
-
-                if (Math.Abs(oldZoom - _zoom) > 0.001)
-                {
-                    double posX = e.GetPosition(WaveCanvas).X;
-                    int centerSample = GetSampleIndexFromX(posX);
-                    UpdateVisibleRange(centerSample);
-                    Redraw();
-                }
-                e.Handled = true;
-            }
-        }
-
-        private void OnRightMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            _isPanning = true;
-            _panStartX = e.GetPosition(WaveCanvas).X;
-            _panStartIndex = _visibleStart;
-            Cursor = Cursors.ScrollAll;
-            e.Handled = true;
-        }
-
-        private void OnMouseMovePan(object sender, MouseEventArgs e)
-        {
-            if (_isPanning)
-            {
-                double deltaX = e.GetPosition(WaveCanvas).X - _panStartX;
-                if (WaveCanvas.ActualWidth > 0)
-                {
-                    int sampleDelta = (int)((deltaX / WaveCanvas.ActualWidth) * (_visibleEnd - _visibleStart));
-                    int newStart = _panStartIndex - sampleDelta;
-                    if (newStart < 0) newStart = 0;
-                    int total = Samples?.Length ?? 0;
-                    int visibleSamples = _visibleEnd - _visibleStart;
-                    if (newStart + visibleSamples > total) newStart = total - visibleSamples;
-                    if (newStart < 0) newStart = 0;
-                    _visibleStart = newStart;
-                    _visibleEnd = _visibleStart + visibleSamples;
-                    Redraw();
-                }
-                e.Handled = true;
-            }
-        }
-
-        private void OnRightMouseUp(object sender, MouseButtonEventArgs e)
-        {
-            _isPanning = false;
-            Cursor = Cursors.Arrow;
-            e.Handled = true;
-        }
-
-        private int GetSampleIndexFromX(double x)
-        {
-            if (WaveCanvas.ActualWidth <= 0 || Samples == null) return 0;
-            double relative = x / WaveCanvas.ActualWidth;
-            return _visibleStart + (int)(relative * (_visibleEnd - _visibleStart));
-        }
-
-        private void UpdateVisibleRange(int? centerSample = null)
-        {
-            if (Samples == null || Samples.Length == 0 || WaveCanvas.ActualWidth <= 0)
-                return;
-
-            int totalSamples = Samples.Length;
-            double samplesPerPixel = _zoom;
-            int visibleSamples = (int)(WaveCanvas.ActualWidth * samplesPerPixel);
-            if (visibleSamples >= totalSamples)
-            {
-                _visibleStart = 0;
-                _visibleEnd = totalSamples;
+                _displaySamples = null;
                 return;
             }
 
-            if (centerSample.HasValue)
+            float max = 0;
+            foreach (var s in Samples)
             {
-                int center = centerSample.Value;
-                int half = visibleSamples / 2;
-                int start = center - half;
-                if (start < 0) start = 0;
-                if (start + visibleSamples > totalSamples) start = totalSamples - visibleSamples;
-                _visibleStart = start;
-                _visibleEnd = _visibleStart + visibleSamples;
+                float abs = Math.Abs(s);
+                if (abs > max) max = abs;
+            }
+
+            if (max > 0)
+            {
+                _displaySamples = new float[Samples.Length];
+                for (int i = 0; i < Samples.Length; i++)
+                {
+                    _displaySamples[i] = Samples[i] / max;
+                }
             }
             else
             {
-                int oldStart = _visibleStart;
-                int oldEnd = _visibleEnd;
-                if (oldEnd <= 0 || oldStart >= totalSamples)
-                {
-                    _visibleStart = 0;
-                    _visibleEnd = visibleSamples;
-                }
-                else
-                {
-                    int newStart = oldStart;
-                    if (newStart + visibleSamples > totalSamples) newStart = totalSamples - visibleSamples;
-                    if (newStart < 0) newStart = 0;
-                    _visibleStart = newStart;
-                    _visibleEnd = _visibleStart + visibleSamples;
-                }
+                _displaySamples = Samples;
             }
+        }
+
+        private void UpdatePlaybackCursor(double normalizedPosition)
+        {
+            if (normalizedPosition < 0 || normalizedPosition > 1 || WaveCanvas.ActualWidth <= 0)
+            {
+                PlaybackCursor.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            PlaybackCursor.Visibility = Visibility.Visible;
+            double x = normalizedPosition * WaveCanvas.ActualWidth;
+            PlaybackCursor.X1 = x;
+            PlaybackCursor.X2 = x;
+            PlaybackCursor.Y1 = 0;
+            PlaybackCursor.Y2 = WaveCanvas.ActualHeight;
         }
 
         private void Redraw()
@@ -189,38 +132,33 @@ namespace EditWave.Views
             WaveTop.Points.Clear();
             WaveBottom.Points.Clear();
 
-            if (Samples == null || Samples.Length == 0 || WaveCanvas.ActualWidth <= 0)
+            if (_displaySamples == null || _displaySamples.Length == 0 || WaveCanvas.ActualWidth <= 0 || WaveCanvas.ActualHeight <= 0)
                 return;
 
             double w = WaveCanvas.ActualWidth;
             double h = WaveCanvas.ActualHeight;
             double half = h / 2;
 
-            int visibleSamples = _visibleEnd - _visibleStart;
-            if (visibleSamples <= 0)
-            {
-                UpdateVisibleRange();
-                visibleSamples = _visibleEnd - _visibleStart;
-                if (visibleSamples <= 0) return;
-            }
+            int totalSamples = _displaySamples.Length;
+            int width = (int)w;
+            int step = totalSamples / width;
+            if (step < 1) step = 1;
 
-            for (int x = 0; x < (int)w; x++)
+            for (int x = 0; x < width; x++)
             {
-                int sampleStart = _visibleStart + (int)((double)x / w * visibleSamples);
-                int sampleEnd = _visibleStart + (int)((double)(x + 1) / w * visibleSamples);
-                if (sampleStart >= Samples.Length) break;
-                if (sampleEnd > Samples.Length) sampleEnd = Samples.Length;
-                if (sampleStart >= sampleEnd) continue;
+                float max = 0;
+                float min = 0;
 
-                float max = float.MinValue;
-                float min = float.MaxValue;
-                for (int i = sampleStart; i < sampleEnd; i++)
+                int start = x * step;
+                int end = start + step;
+                if (end > totalSamples) end = totalSamples;
+
+                for (int i = start; i < end; i++)
                 {
-                    float v = Samples[i];
+                    float v = _displaySamples[i];
                     if (v > max) max = v;
                     if (v < min) min = v;
                 }
-                if (max < min) { max = 0; min = 0; }
 
                 double yMax = half - (max * half);
                 double yMin = half - (min * half);
@@ -231,13 +169,6 @@ namespace EditWave.Views
 
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
-            if (Keyboard.Modifiers == ModifierKeys.Control && Keyboard.Modifiers == ModifierKeys.Shift)
-            {
-                double x = e.GetPosition(WaveCanvas).X;
-                double seconds = (x / WaveCanvas.ActualWidth) * Duration;
-                SelectionChanged?.Invoke(seconds, seconds);
-                return;
-            }
             _isSelecting = true;
             _selectionStartX = e.GetPosition(WaveCanvas).X;
             _selectionEndX = _selectionStartX;
@@ -265,17 +196,8 @@ namespace EditWave.Views
                 double startSeconds = (startX / WaveCanvas.ActualWidth) * Duration;
                 double endSeconds = (endX / WaveCanvas.ActualWidth) * Duration;
                 SelectionChanged?.Invoke(startSeconds, endSeconds);
-                _selectionRect.Visibility = Visibility.Collapsed;
             }
             base.OnMouseLeftButtonUp(e);
-        }
-
-        protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
-        {
-            _zoom = 1.0;
-            UpdateVisibleRange();
-            Redraw();
-            base.OnMouseDoubleClick(e);
         }
 
         private void UpdateSelectionRect()
@@ -290,9 +212,18 @@ namespace EditWave.Views
             Canvas.SetTop(_selectionRect, 0);
             _selectionRect.Visibility = Visibility.Visible;
         }
-
+        private void OnSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (e.NewSize.Width > 0 && _displaySamples != null && _displaySamples.Length > 0)
+            {
+                Redraw();
+                UpdatePlaybackCursor(PlaybackPosition);
+            }
+        }
         public void ClearSelection()
         {
+            _selectionStartX = 0;
+            _selectionEndX = 0;
             if (_selectionRect != null)
                 _selectionRect.Visibility = Visibility.Collapsed;
         }

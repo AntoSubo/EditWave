@@ -3,13 +3,15 @@ using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
 using System.Diagnostics;
+using NAudio.MediaFoundation;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Threading;
-namespace EditWave.Services
+using NAudio.Wave.SampleProviders;
 
+namespace EditWave.Services
 {
     public class AudioService : IDisposable
     {
@@ -29,7 +31,7 @@ namespace EditWave.Services
         private DispatcherTimer _positionTimer;
         private bool _isPlaying;
         private string _currentFilePath;
-        public bool HasFile => !string.IsNullOrEmpty(_currentFilePath); // чтобы юзер не тыкал на сохранить до вообще появления какого либо файла
+        public bool HasFile => !string.IsNullOrEmpty(_currentFilePath);
         public bool IsPlaying => _isPlaying;
         public double Duration { get; private set; }
         public double CurrentPosition
@@ -48,7 +50,6 @@ namespace EditWave.Services
             {
                 Stop();
 
-                // Если загружаем MP3 и это не временный файл, конвертируем во временный WAV
                 if (!isTemporary && filePath.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
                 {
                     string wavPath = ConvertMp3ToWav(filePath);
@@ -73,7 +74,7 @@ namespace EditWave.Services
                 }
                 else
                 {
-                    _tempFilePath = null; // если файл обычный можно забыть про временный
+                    _tempFilePath = null;
                 }
                 _audioStream?.Dispose();
                 _waveOut?.Dispose();
@@ -98,6 +99,7 @@ namespace EditWave.Services
                 return false;
             }
         }
+
         public void CleanTempFile()
         {
             if (!string.IsNullOrEmpty(_tempFilePath) && File.Exists(_tempFilePath))
@@ -106,27 +108,28 @@ namespace EditWave.Services
                 {
                     Stop();
                     _audioStream?.Dispose();
-                    _audioStream = null; 
+                    _audioStream = null;
                     _waveOut?.Dispose();
                     _waveOut = null;
 
                     File.Delete(_tempFilePath);
                 }
-                catch( Exception ex ) 
+                catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Не удалось удалить временный файл: {ex.Message}");
                 }
                 _tempFilePath = null;
             }
         }
+
         public void Dispose()
         {
             CleanTempFile();
             _positionTimer?.Stop();
-    
             _audioStream?.Dispose();
             _waveOut?.Dispose();
         }
+
         public void Stop()
         {
             if (_waveOut != null && _isPlaying)
@@ -140,8 +143,8 @@ namespace EditWave.Services
                 _audioStream.Position = 0;
                 PositionChanged?.Invoke();
             }
-
         }
+
         public void Play()
         {
             if (_waveOut == null) return;
@@ -151,16 +154,12 @@ namespace EditWave.Services
             _waveOut.Play();
             _isPlaying = true;
 
-            //_positionTimer = new System.Timers.Timer(100);
-            //_positionTimer.Elapsed += OnTimerTick;
-            //_positionTimer.Start();
-            //_isPlaying = true;
-            //создаём UI-таймер вместо обычного
             _positionTimer = new DispatcherTimer();
             _positionTimer.Interval = TimeSpan.FromMilliseconds(100);
             _positionTimer.Tick += OnTimerTick;
             _positionTimer.Start();
         }
+
         public void Pause()
         {
             if (_waveOut != null && _isPlaying)
@@ -170,14 +169,15 @@ namespace EditWave.Services
                 _positionTimer?.Stop();
             }
         }
+
         public void SetVolume(float volume)
         {
             if (_audioStream is AudioFileReader reader)
             {
                 reader.Volume = Math.Clamp(volume, 0f, 1f);
             }
-
         }
+
         public void SetPosition(double position)
         {
             if (_audioStream == null) return;
@@ -186,6 +186,7 @@ namespace EditWave.Services
             _audioStream.CurrentTime = TimeSpan.FromSeconds(position);
             PositionChanged?.Invoke();
         }
+
         private void OnTimerTick(object sender, EventArgs args)
         {
             if (_isPlaying && _audioStream != null)
@@ -193,6 +194,7 @@ namespace EditWave.Services
                 PositionChanged?.Invoke();
             }
         }
+
         public void ApplyReverse()
         {
             if (_audioStream == null) return;
@@ -221,12 +223,11 @@ namespace EditWave.Services
                 }
             }
             LoadFile(tempFile, isTemporary: true);
-   
+
             if (wasPlaying)
             {
                 Play();
             }
-
         }
 
         public void Trim(double startSeconds, double endSeconds)
@@ -267,7 +268,7 @@ namespace EditWave.Services
             if (wasPlaying) Play();
         }
 
-        private string ConvertMp3ToWav(string mp3Path) // так как с мп3 нормально не работает и надо сразу конвертировать чтоб работала громкость и тп
+        private string ConvertMp3ToWav(string mp3Path)
         {
             string tempWav = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
             using (var reader = new Mp3FileReader(mp3Path))
@@ -277,6 +278,7 @@ namespace EditWave.Services
             }
             return tempWav;
         }
+
         public void DeleteSelection(double startSeconds, double endSeconds)
         {
             if (_audioStream == null) return;
@@ -328,6 +330,7 @@ namespace EditWave.Services
             LoadFile(tempFile, isTemporary: true);
             if (wasPlaying) Play();
         }
+
         public void Export(string filePath)
         {
             if (_audioStream == null) return;
@@ -375,7 +378,6 @@ namespace EditWave.Services
                 if (wasPlaying) Play();
             }
         }
-   
 
         public float[] GetWaveformSamples()
         {
@@ -408,9 +410,9 @@ namespace EditWave.Services
                 return samples.ToArray();
             }
         }
+
         public void ApplyGain(float gainFactor)
         {
-
             if (_audioStream == null)
             {
                 System.Diagnostics.Debug.WriteLine("_audioStream == null");
@@ -432,7 +434,7 @@ namespace EditWave.Services
                     for (int i = 0; i < read; i++)
                     {
                         buffer[i] *= gainFactor;
-                   
+
                         if (buffer[i] > 1.0f) buffer[i] = 1.0f;
                         if (buffer[i] < -1.0f) buffer[i] = -1.0f;
                     }
@@ -444,47 +446,5 @@ namespace EditWave.Services
 
             if (wasPlaying) Play();
         }
-        //NAudio имеет класс WaveFormat и позволяет изменять скорость через WaveFormatConversionStream с новым sample rate
-
-        public void ChangeSpeed(float speedFactor)
-        {
-            try
-            {
-                if (_audioStream == null || speedFactor <= 0)
-                {
-                    MessageBox.Show("Нет аудио или неверный коэффициент");
-                    return;
-                }
-
-                bool wasPlaying = _isPlaying;
-                Stop();
-
-                var oldFormat = _audioStream.WaveFormat;
-                int newSampleRate = (int)(oldFormat.SampleRate * speedFactor);
-                var newFormat = new WaveFormat(newSampleRate, oldFormat.BitsPerSample, oldFormat.Channels);
-
-                string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
-
-                using (var reader = new AudioFileReader(_currentFilePath))
-                using (var converter = new WaveFormatConversionStream(newFormat, reader))
-                using (var writer = new WaveFileWriter(tempFile, converter.WaveFormat))
-                {
-                    byte[] buffer = new byte[65536];
-                    int bytesRead;
-                    while ((bytesRead = converter.Read(buffer, 0, buffer.Length)) > 0)
-                    {
-                        writer.Write(buffer, 0, bytesRead);
-                    }
-                }
-
-                LoadFile(tempFile, isTemporary: true);
-                if (wasPlaying) Play();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка в ChangeSpeed: {ex.Message}\n{ex.StackTrace}");
-            }
-        }
     }
 }
-// TODO ускорение замедление добавление новых кусков обдумать как делать

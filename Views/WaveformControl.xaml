@@ -11,5 +11,9 @@
                   Stroke="#FF4081"
                   StrokeThickness="1"
                   StrokeLineJoin="Round"/>
+        <Line x:Name="PlaybackCursor"
+              Stroke="Yellow"
+              StrokeThickness="2"
+              Visibility="Collapsed"/>
     </Canvas>
 </UserControl>
