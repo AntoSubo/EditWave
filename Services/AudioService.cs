@@ -15,6 +15,9 @@ namespace EditWave.Services
 {
     public class AudioService : IDisposable
     {
+        private List<string> _undoStack=new List<string>();
+        private int _undoIndex = -1;
+        private const int maxUndo = 20;
         public string GetCurrentFilePath()
         {
             return _currentFilePath;
@@ -445,6 +448,15 @@ namespace EditWave.Services
             LoadFile(tempFile, isTemporary: true);
 
             if (wasPlaying) Play();
+        }
+        // метод сохр. состояния для "отменить" "вернуть"
+        private void SaveUndoState()
+        {
+            if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
+                return;
+            string tempCopy = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
+            File.Copy(_currentFilePath, tempCopy, true);
+            if (_undoIndex < )
         }
     }
 }
