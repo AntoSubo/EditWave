@@ -114,10 +114,26 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
+
                 <TextBlock Grid.Column="0" Text="{Binding CurrentTime}" VerticalAlignment="Center" Foreground="#333" Margin="0,0,10,0" FontFamily="Consolas" FontSize="13"/>
                 <Slider Grid.Column="1" Value="{Binding CurrentPosition}" Maximum="{Binding Duration}" Margin="10,0" ToolTip="Перемотка"/>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+
+                <ProgressBar Grid.Column="2" Width="100" Height="15" Margin="10,0" IsIndeterminate="True">
+                    <ProgressBar.Style>
+                        <Style TargetType="ProgressBar">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsProcessing}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ProgressBar.Style>
+                </ProgressBar>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="🔊" Margin="0,0,5,0" Foreground="#333"/>
                     <Slider Width="100" Minimum="0" Maximum="1" Value="{Binding Volume}" ToolTip="Громкость воспроизведения"/>
                 </StackPanel>

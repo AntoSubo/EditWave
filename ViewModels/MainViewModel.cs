@@ -27,7 +27,12 @@ namespace EditWave.ViewModels
         private double _selectionStart;
         private double _selectionEnd;
         private float[] _waveformSamples;
-
+        private bool _isProcessing;
+        public bool IsProcessing
+        {
+            get => _isProcessing;
+            set { _isProcessing = value; OnPropertyChanged(); }
+        }
         public ObservableCollection<Project> ProjectsList
         {
             get => _projectsList;
@@ -242,77 +247,94 @@ namespace EditWave.ViewModels
             CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
         }
 
-        private void Trim(object parameter)
+        private async void Trim(object parameter)
         {
             if (_audioService == null) return;
             if (SelectionStart >= SelectionEnd)
             {
-                MessageBox.Show("Сначала выделите фрагмент на волновой форме", "Нет выделения");
+                MessageBox.Show("Сначала выделите фрагмент");
                 return;
             }
-            try
-            {
-                _audioService.Trim(SelectionStart, SelectionEnd);
-                Duration = _audioService.Duration;
-                LoadWaveform();
-                SelectionStart = 0;
-                SelectionEnd = 0;
-                MessageBox.Show("Фрагмент обрезан", "Готово");
-            }
-            catch (Exception ex) { MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка"); }
+            IsProcessing = true;
+            await Task.Run(() => _audioService.Trim(SelectionStart, SelectionEnd));
+            IsProcessing = false;
+            Duration = _audioService.Duration;
+            LoadWaveform();
+            SelectionStart = 0;
+            SelectionEnd = 0;
+            MessageBox.Show("Фрагмент обрезан");
         }
 
-        private void Delete(object parameter)
+        private async void Delete(object parameter)
         {
             if (SelectionStart >= SelectionEnd)
             {
-                MessageBox.Show("Сначала выделите фрагмент на волновой форме", "Нет выделения");
+                MessageBox.Show("Сначала выделите фрагмент");
                 return;
             }
-            try
-            {
-                _audioService.DeleteSelection(SelectionStart, SelectionEnd);
-                Duration = _audioService.Duration;
-                LoadWaveform();
-                SelectionStart = 0;
-                SelectionEnd = 0;
-                MessageBox.Show("Фрагмент удалён", "Готово");
-            }
-            catch (Exception ex) { MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка"); }
+            IsProcessing = true;
+            await Task.Run(() => _audioService.DeleteSelection(SelectionStart, SelectionEnd));
+            IsProcessing = false;
+            Duration = _audioService.Duration;
+            LoadWaveform();
+            SelectionStart = 0;
+            SelectionEnd = 0;
+            MessageBox.Show("Фрагмент удалён");
         }
 
-        private void ApplyGain(object parameter)
+        private async void ApplyGain(object parameter)
         {
+            //if (_audioService == null) return;
+            //float gainFactor = (float)(Gain / 100.0);
+            //if (SelectionStart < SelectionEnd)
+            //{
+            //    _audioService.ApplyGainToSelection(gainFactor, SelectionStart, SelectionEnd);
+            //    SelectionStart = 0;
+            //    SelectionEnd = 0;
+            //}
+            //else
+            //{
+            //    _audioService.ApplyGain(gainFactor);
+            //}
             if (_audioService == null) return;
-            float gainFactor = (float)(Gain / 100.0);
-            if (SelectionStart < SelectionEnd)
+            IsProcessing = true;
+            await Task.Run(() =>
             {
-                _audioService.ApplyGainToSelection(gainFactor, SelectionStart, SelectionEnd);
-                SelectionStart = 0;
-                SelectionEnd = 0;
-            }
-            else
-            {
-                _audioService.ApplyGain(gainFactor);
-            }
+                float gainFactor = (float)(Gain / 100.0);
+                if (SelectionStart < SelectionEnd)
+                    _audioService.ApplyGainToSelection(gainFactor, SelectionStart, SelectionEnd);
+                else
+                    _audioService.ApplyGain(gainFactor);
+            });
+            IsProcessing = false;
             Duration = _audioService.Duration;
             LoadWaveform();
             MessageBox.Show($"Усиление применено: {Gain}%");
         }
 
-        private void ApplyReverse(object parameter)
+        private async void ApplyReverse(object parameter)
         {
+            //if (_audioService == null) return;
+            //if (SelectionStart < SelectionEnd)
+            //{
+            //    _audioService.ApplyReverseToSelection(SelectionStart, SelectionEnd);
+            //    SelectionStart = 0;
+            //    SelectionEnd = 0;
+            //}
+            //else
+            //{
+            //    _audioService.ApplyReverse();
+            //}
             if (_audioService == null) return;
-            if (SelectionStart < SelectionEnd)
+            IsProcessing = true;
+            await Task.Run(() =>
             {
-                _audioService.ApplyReverseToSelection(SelectionStart, SelectionEnd);
-                SelectionStart = 0;
-                SelectionEnd = 0;
-            }
-            else
-            {
-                _audioService.ApplyReverse();
-            }
+                if (SelectionStart < SelectionEnd)
+                    _audioService.ApplyReverseToSelection(SelectionStart, SelectionEnd);
+                else
+                    _audioService.ApplyReverse();
+            });
+            IsProcessing = false;
             Duration = _audioService.Duration;
             LoadWaveform();
             MessageBox.Show("Реверс применён", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -399,18 +421,24 @@ namespace EditWave.ViewModels
         private void LoadWaveform() => WaveformSamples = _audioService.GetWaveformSamples();
 
         public void Clean() => _audioService.Dispose();
-        private void Undo(object parameter)
+        private async void Undo(object parameter)
         {
-            _audioService.Undo();
+            if (!_audioService.CanUndo()) return;
+            IsProcessing = true;
+            await Task.Run(() => _audioService.Undo());
+            IsProcessing = false;
             Duration = _audioService.Duration;
             CurrentPosition = 0;
             LoadWaveform();
             CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
         }
 
-        private void Redo(object parameter)
+        private async void Redo(object parameter)
         {
-            _audioService.Redo();
+            if (!_audioService.CanRedo()) return;
+            IsProcessing = true;
+            await Task.Run(() => _audioService.Redo());
+            IsProcessing = false;
             Duration = _audioService.Duration;
             CurrentPosition = 0;
             LoadWaveform();
