@@ -43,6 +43,9 @@
             <Separator/>
             <Button Command="{Binding SaveProjectCommand}" Content="💾 Сохранить проект" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Сохранить проект в базу данных"/>
             <Button Command="{Binding ExportCommand}" Content="📁 Экспорт" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Экспортировать аудио в файл"/>
+            <Separator/>
+            <Button Command="{Binding UndoCommand}" Content="↩️ Отменить" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Ctrl+Z"/>
+            <Button Command="{Binding RedoCommand}" Content="↪️ Повторить" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Ctrl+Y"/>
         </ToolBar>
 
         <Grid Grid.Row="2">

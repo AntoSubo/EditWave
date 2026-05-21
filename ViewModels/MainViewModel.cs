@@ -120,6 +120,8 @@ namespace EditWave.ViewModels
         public ICommand StopCommand { get; }
         public ICommand TrimCommand { get; }
         public ICommand ExportCommand { get; }
+        public ICommand UndoCommand { get; }
+        public ICommand RedoCommand { get; }
         public ICommand DeleteCommand { get; }
         public ICommand ApplyGainCommand { get; }
         public ICommand ApplyReverseCommand { get; }
@@ -143,6 +145,8 @@ namespace EditWave.ViewModels
             ApplyGainCommand = new RelayCommand(ApplyGain);
             ApplyReverseCommand = new RelayCommand(ApplyReverse);
             SaveProjectCommand = new RelayCommand(SaveProject);
+            UndoCommand = new RelayCommand(Undo);
+            RedoCommand = new RelayCommand(Redo);
             OpenProjectCommand = new RelayCommand(OpenProject);
             ShowAboutCommand = new RelayCommand(ShowAbout);
             ExitCommand = new RelayCommand(Exit);
@@ -281,7 +285,16 @@ namespace EditWave.ViewModels
         {
             if (_audioService == null) return;
             float gainFactor = (float)(Gain / 100.0);
-            _audioService.ApplyGain(gainFactor);
+            if (SelectionStart < SelectionEnd)
+            {
+                _audioService.ApplyGainToSelection(gainFactor, SelectionStart, SelectionEnd);
+                SelectionStart = 0;
+                SelectionEnd = 0;
+            }
+            else
+            {
+                _audioService.ApplyGain(gainFactor);
+            }
             Duration = _audioService.Duration;
             LoadWaveform();
             MessageBox.Show($"Усиление применено: {Gain}%");
@@ -290,7 +303,16 @@ namespace EditWave.ViewModels
         private void ApplyReverse(object parameter)
         {
             if (_audioService == null) return;
-            _audioService.ApplyReverse();
+            if (SelectionStart < SelectionEnd)
+            {
+                _audioService.ApplyReverseToSelection(SelectionStart, SelectionEnd);
+                SelectionStart = 0;
+                SelectionEnd = 0;
+            }
+            else
+            {
+                _audioService.ApplyReverse();
+            }
             Duration = _audioService.Duration;
             LoadWaveform();
             MessageBox.Show("Реверс применён", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -377,5 +399,23 @@ namespace EditWave.ViewModels
         private void LoadWaveform() => WaveformSamples = _audioService.GetWaveformSamples();
 
         public void Clean() => _audioService.Dispose();
+        private void Undo(object parameter)
+        {
+            _audioService.Undo();
+            Duration = _audioService.Duration;
+            CurrentPosition = 0;
+            LoadWaveform();
+            CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+        }
+
+        private void Redo(object parameter)
+        {
+            _audioService.Redo();
+            Duration = _audioService.Duration;
+            CurrentPosition = 0;
+            LoadWaveform();
+            CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+        }
     }
+
 }

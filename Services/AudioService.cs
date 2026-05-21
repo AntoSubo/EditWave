@@ -9,7 +9,6 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Threading;
-using NAudio.Wave.SampleProviders;
 
 namespace EditWave.Services
 {
@@ -17,7 +16,7 @@ namespace EditWave.Services
     {
         private List<string> _undoStack=new List<string>();
         private int _undoIndex = -1;
-        private const int maxUndo = 20;
+        public const int maxUndo = 20;
         public string GetCurrentFilePath()
         {
             return _currentFilePath;
@@ -200,6 +199,7 @@ namespace EditWave.Services
 
         public void ApplyReverse()
         {
+            SaveUndoState();
             if (_audioStream == null) return;
             bool wasPlaying = _isPlaying;
             Stop();
@@ -235,6 +235,7 @@ namespace EditWave.Services
 
         public void Trim(double startSeconds, double endSeconds)
         {
+            SaveUndoState();
             if (_audioStream == null) return;
             if (startSeconds >= endSeconds)
             {
@@ -284,6 +285,7 @@ namespace EditWave.Services
 
         public void DeleteSelection(double startSeconds, double endSeconds)
         {
+            SaveUndoState();
             if (_audioStream == null) return;
             if (startSeconds >= endSeconds)
             {
@@ -416,6 +418,7 @@ namespace EditWave.Services
 
         public void ApplyGain(float gainFactor)
         {
+            SaveUndoState();
             if (_audioStream == null)
             {
                 System.Diagnostics.Debug.WriteLine("_audioStream == null");
@@ -454,9 +457,246 @@ namespace EditWave.Services
         {
             if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
                 return;
+
             string tempCopy = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
             File.Copy(_currentFilePath, tempCopy, true);
-            if (_undoIndex < )
+
+            if (_undoIndex < _undoStack.Count - 1)
+            {
+                for (int i = _undoStack.Count - 1; i > _undoIndex; i--)
+                {
+                    try { File.Delete(_undoStack[i]); } catch { }
+                }
+                _undoStack.RemoveRange(_undoIndex + 1, _undoStack.Count - _undoIndex - 1);
+            }
+
+            _undoStack.Add(tempCopy);
+            _undoIndex++;
+
+            while (_undoStack.Count > maxUndo)
+            {
+                try { File.Delete(_undoStack[0]); } catch { }
+                _undoStack.RemoveAt(0);
+                _undoIndex--;
+            }
+        }
+        public bool CanUndo() => _undoIndex > 0;
+        public bool CanRedo() => _undoIndex < _undoStack.Count - 1;
+
+        public void Undo()
+        {
+            if (!CanUndo()) return;
+            _undoIndex--;
+            string prevFile = _undoStack[_undoIndex];
+            if (File.Exists(prevFile))
+            {
+                LoadFile(prevFile, isTemporary: true);
+            }
+        }
+
+        public void Redo()
+        {
+            if (!CanRedo()) return;
+            _undoIndex++;
+            string nextFile = _undoStack[_undoIndex];
+            if (File.Exists(nextFile))
+            {
+                LoadFile(nextFile, isTemporary: true);
+            }
+        }
+        public void ApplyGainToSelection(float gainFactor, double startSeconds, double endSeconds)
+        {
+            if (_audioStream == null) return;
+            if (startSeconds >= endSeconds)
+            {
+                MessageBox.Show("Некорректное выделение");
+                return;
+            }
+
+            SaveUndoState();
+            bool wasPlaying = _isPlaying;
+            Stop();
+
+            string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
+            string tempSelection = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
+            string tempGained = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
+
+            try
+            {
+                using (var reader = new AudioFileReader(_currentFilePath))
+                using (var writer = new WaveFileWriter(tempSelection, reader.WaveFormat))
+                {
+                    reader.CurrentTime = TimeSpan.FromSeconds(startSeconds);
+                    long bytesToCopy = (long)((endSeconds - startSeconds) * reader.WaveFormat.AverageBytesPerSecond);
+                    int blockAlign = reader.WaveFormat.BlockAlign;
+                    bytesToCopy -= bytesToCopy % blockAlign;
+                    byte[] buffer = new byte[65536];
+                    long copied = 0;
+                    while (copied < bytesToCopy)
+                    {
+                        int toRead = (int)Math.Min(buffer.Length, bytesToCopy - copied);
+                        toRead -= toRead % blockAlign;
+                        int read = reader.Read(buffer, 0, toRead);
+                        if (read == 0) break;
+                        writer.Write(buffer, 0, read);
+                        copied += read;
+                    }
+                }
+
+                using (var gainReader = new AudioFileReader(tempSelection))
+                using (var gainWriter = new WaveFileWriter(tempGained, gainReader.WaveFormat))
+                {
+                    float[] floatBuffer = new float[4096];
+                    int read;
+                    while ((read = gainReader.Read(floatBuffer, 0, floatBuffer.Length)) > 0)
+                    {
+                        for (int i = 0; i < read; i++)
+                        {
+                            floatBuffer[i] *= gainFactor;
+                            if (floatBuffer[i] > 1.0f) floatBuffer[i] = 1.0f;
+                            if (floatBuffer[i] < -1.0f) floatBuffer[i] = -1.0f;
+                        }
+                        gainWriter.WriteSamples(floatBuffer, 0, read);
+                    }
+                }
+
+                using (var reader = new AudioFileReader(_currentFilePath))
+                using (var writer = new WaveFileWriter(tempFile, reader.WaveFormat))
+                {
+                    byte[] buffer = new byte[65536];
+                    int blockAlign = reader.WaveFormat.BlockAlign;
+
+                    reader.CurrentTime = TimeSpan.FromSeconds(0);
+                    long bytesBefore = (long)(startSeconds * reader.WaveFormat.AverageBytesPerSecond);
+                    bytesBefore -= bytesBefore % blockAlign;
+                    long copied = 0;
+                    while (copied < bytesBefore)
+                    {
+                        int toRead = (int)Math.Min(buffer.Length, bytesBefore - copied);
+                        toRead -= toRead % blockAlign;
+                        int read = reader.Read(buffer, 0, toRead);
+                        if (read == 0) break;
+                        writer.Write(buffer, 0, read);
+                        copied += read;
+                    }
+
+                    using (var gainedReader = new AudioFileReader(tempGained))
+                    {
+                        gainedReader.Position = 0;
+                        long fragmentBytes = gainedReader.Length;
+                        copied = 0;
+                        while (copied < fragmentBytes)
+                        {
+                            int toRead = (int)Math.Min(buffer.Length, fragmentBytes - copied);
+                            toRead -= toRead % blockAlign;
+                            int read = gainedReader.Read(buffer, 0, toRead);
+                            if (read == 0) break;
+                            writer.Write(buffer, 0, read);
+                            copied += read;
+                        }
+                    }
+
+                    reader.CurrentTime = TimeSpan.FromSeconds(endSeconds);
+                    long remaining = reader.Length - reader.Position;
+                    remaining -= remaining % blockAlign;
+                    copied = 0;
+                    while (copied < remaining)
+                    {
+                        int toRead = (int)Math.Min(buffer.Length, remaining - copied);
+                        toRead -= toRead % blockAlign;
+                        int read = reader.Read(buffer, 0, toRead);
+                        if (read == 0) break;
+                        writer.Write(buffer, 0, read);
+                        copied += read;
+                    }
+                }
+
+                LoadFile(tempFile, isTemporary: true);
+                if (wasPlaying) Play();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+            finally
+            {
+                if (File.Exists(tempSelection)) File.Delete(tempSelection);
+                if (File.Exists(tempGained)) File.Delete(tempGained);
+            }
+        }
+        public void ApplyReverseToSelection(double startSeconds, double endSeconds)
+        {
+            if (_audioStream == null) return;
+            if (startSeconds >= endSeconds)
+            {
+                MessageBox.Show("Некорректное выделение");
+                return;
+            }
+
+            SaveUndoState();
+            bool wasPlaying = _isPlaying;
+            Stop();
+
+            string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
+
+            using (var reader = new AudioFileReader(_currentFilePath))
+            using (var writer = new WaveFileWriter(tempFile, reader.WaveFormat))
+            {
+                byte[] buffer = new byte[65536];
+                int blockAlign = reader.WaveFormat.BlockAlign;
+
+                // копируем начало
+                reader.CurrentTime = TimeSpan.FromSeconds(0);
+                long bytesBefore = (long)(startSeconds * reader.WaveFormat.AverageBytesPerSecond);
+                bytesBefore -= bytesBefore % blockAlign;
+                long copied = 0;
+                while (copied < bytesBefore)
+                {
+                    int toRead = (int)Math.Min(buffer.Length, bytesBefore - copied);
+                    toRead -= toRead % blockAlign;
+                    int read = reader.Read(buffer, 0, toRead);
+                    if (read == 0) break;
+                    writer.Write(buffer, 0, read);
+                    copied += read;
+                }
+
+                // читаем выделенный фрагмент в память и переворачиваем
+                long bytesInSelection = (long)((endSeconds - startSeconds) * reader.WaveFormat.AverageBytesPerSecond);
+                bytesInSelection -= bytesInSelection % blockAlign;
+
+                byte[] selectionBuffer = new byte[bytesInSelection];
+                int totalRead = 0;
+                while (totalRead < bytesInSelection)
+                {
+                    int toRead = (int)Math.Min(buffer.Length, bytesInSelection - totalRead);
+                    toRead -= toRead % blockAlign;
+                    int read = reader.Read(buffer, 0, toRead);
+                    if (read == 0) break;
+                    Array.Copy(buffer, 0, selectionBuffer, totalRead, read);
+                    totalRead += read;
+                }
+
+                // переворачиваем
+                Array.Reverse(selectionBuffer);
+                writer.Write(selectionBuffer, 0, selectionBuffer.Length);
+
+                // копируем конец
+                long remaining = reader.Length - reader.Position;
+                remaining -= remaining % blockAlign;
+                copied = 0;
+                while (copied < remaining)
+                {
+                    int toRead = (int)Math.Min(buffer.Length, remaining - copied);
+                    toRead -= toRead % blockAlign;
+                    int read = reader.Read(buffer, 0, toRead);
+                    if (read == 0) break;
+                    writer.Write(buffer, 0, read);
+                    copied += read;
+                }
+            }
+
+            LoadFile(tempFile, isTemporary: true);
+            if (wasPlaying) Play();
         }
     }
 }

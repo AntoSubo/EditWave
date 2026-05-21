@@ -16,7 +16,20 @@ namespace EditWave.Views
             DataContext = _viewModel;
             this.Closing += MainWindow_Closing;
         }
-
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Z)
+            {
+                if (DataContext is MainViewModel vm) vm.UndoCommand?.Execute(null);
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Y)
+            {
+                if (DataContext is MainViewModel vm) vm.RedoCommand?.Execute(null);
+                e.Handled = true;
+            }
+            base.OnKeyDown(e);
+        }
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             _viewModel.Clean();
