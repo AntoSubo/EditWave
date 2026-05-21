@@ -14,6 +14,7 @@ namespace EditWave.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
+
         private readonly AudioService _audioService;
         private string _currentTime = "0";
         private double _currentPosition;
@@ -37,6 +38,19 @@ namespace EditWave.ViewModels
         {
             get => _projectsList;
             set { _projectsList = value; OnPropertyChanged(); }
+        }
+        private bool _canUndo;
+        public bool CanUndo
+        {
+            get => _canUndo;
+            set { _canUndo = value; OnPropertyChanged(); }
+        }
+
+        private bool _canRedo;
+        public bool CanRedo
+        {
+            get => _canRedo;
+            set { _canRedo = value; OnPropertyChanged(); }
         }
 
         public Project SelectedProject
@@ -141,7 +155,8 @@ namespace EditWave.ViewModels
         {
             _audioService = new AudioService();
             _audioService.PositionChanged += OnPositionChanged;
-
+            _audioService.UndoStateChanged += UpdateUndoRedoState;
+            UpdateUndoRedoState();
             PlayCommand = new RelayCommand(Play);
             PauseCommand = new RelayCommand(Pause);
             StopCommand = new RelayCommand(Stop);
@@ -163,7 +178,11 @@ namespace EditWave.ViewModels
             _projectService = new ProjectService();
             LoadProjectsFromDb();
         }
-
+        private void UpdateUndoRedoState()
+        {
+            CanUndo = _audioService.CanUndo();
+            CanRedo = _audioService.CanRedo();
+        }
         private void DeleteProject(object parameter)
         {
             if (parameter is int projectId)

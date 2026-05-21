@@ -28,6 +28,7 @@ namespace EditWave.Services
         private List<string> _undoStack=new List<string>();
         private int _undoIndex = -1;
         public const int maxUndo = 5;
+        public event Action UndoStateChanged;
         public string GetCurrentFilePath()
         {
             return _currentFilePath;
@@ -466,6 +467,7 @@ namespace EditWave.Services
         // метод сохр. состояния для "отменить" "вернуть"
         private void SaveUndoState()
         {
+           
             if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
                 return;
 
@@ -490,12 +492,14 @@ namespace EditWave.Services
                 _undoStack.RemoveAt(0);
                 _undoIndex--;
             }
+            UndoStateChanged?.Invoke();
         }
         public bool CanUndo() => _undoIndex > 0;
         public bool CanRedo() => _undoIndex < _undoStack.Count - 1;
 
         public void Undo()
         {
+         
             if (!CanUndo()) return;
             _undoIndex--;
             string prevFile = _undoStack[_undoIndex];
@@ -505,10 +509,12 @@ namespace EditWave.Services
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
             }
+            UndoStateChanged?.Invoke();
         }
 
         public void Redo()
         {
+            
             if (!CanRedo()) return;
             _undoIndex++;
             string nextFile = _undoStack[_undoIndex];
@@ -518,6 +524,7 @@ namespace EditWave.Services
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
             }
+            UndoStateChanged?.Invoke();
         }
         public void ApplyGainToSelection(float gainFactor, double startSeconds, double endSeconds)
         {
