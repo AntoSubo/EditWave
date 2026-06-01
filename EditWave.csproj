@@ -5,6 +5,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+	  <ApplicationIcon>free-icon-music-application-8030594.ico</ApplicationIcon>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
@@ -28,6 +29,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="free-icon-music-application-8030594.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="lame.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
