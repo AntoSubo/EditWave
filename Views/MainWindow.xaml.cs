@@ -16,20 +16,60 @@ namespace EditWave.Views
             DataContext = _viewModel;
             this.Closing += MainWindow_Closing;
         }
+
         protected override void OnKeyDown(KeyEventArgs e)
         {
-            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Z)
+            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.O)
             {
-                if (DataContext is MainViewModel vm) vm.UndoCommand?.Execute(null);
+                _viewModel.OpenProjectCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S)
+            {
+                _viewModel.SaveProjectCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.E)
+            {
+                _viewModel.ExportCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.T)
+            {
+                _viewModel.TrimCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Delete)
+            {
+                _viewModel.DeleteCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Z)
+            {
+                _viewModel.UndoCommand.Execute(null);
                 e.Handled = true;
             }
             else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Y)
             {
-                if (DataContext is MainViewModel vm) vm.RedoCommand?.Execute(null);
+                _viewModel.RedoCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.F1)
+            {
+                _viewModel.ShowAboutCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Space)
+            {
+                if (_viewModel.IsPlaying)
+                    _viewModel.PauseCommand.Execute(null);
+                else
+                    _viewModel.PlayCommand.Execute(null);
                 e.Handled = true;
             }
             base.OnKeyDown(e);
         }
+
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             _viewModel.Clean();

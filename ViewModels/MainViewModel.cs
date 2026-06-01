@@ -29,6 +29,7 @@ namespace EditWave.ViewModels
         private double _selectionEnd;
         private float[] _waveformSamples;
         private bool _isProcessing;
+        public bool IsPlaying => _audioService.IsPlaying;
         public bool IsProcessing
         {
             get => _isProcessing;
