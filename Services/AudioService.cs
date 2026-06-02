@@ -25,7 +25,7 @@ namespace EditWave.Services
             }
             catch { }
         }
-        private List<string> _undoStack=new List<string>();
+        private List<string> _undoStack = new List<string>();
         private int _undoIndex = -1;
         public const int maxUndo = 5;
         public event Action UndoStateChanged;
@@ -45,7 +45,7 @@ namespace EditWave.Services
         private DispatcherTimer _positionTimer;
         private bool _isPlaying;
         private string _currentFilePath;
-        public bool HasFile => !string.IsNullOrEmpty(_currentFilePath);
+        public bool HasFile => !string.IsNullOrEmpty(_currentFilePath); // чтобы юзер не тыкал на сохранить до вообще появления какого либо файла
         public bool IsPlaying => _isPlaying;
         public double Duration { get; private set; }
         public double CurrentPosition
@@ -64,6 +64,7 @@ namespace EditWave.Services
             {
                 Stop();
 
+                // Если загружаем MP3 и это не временный файл, конвертируем во временный WAV
                 if (!isTemporary && filePath.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
                 {
                     string wavPath = ConvertMp3ToWav(filePath);
@@ -88,7 +89,7 @@ namespace EditWave.Services
                 }
                 else
                 {
-                    _tempFilePath = null;
+                    _tempFilePath = null; // если файл обычный можно забыть про временный
                 }
                 _audioStream?.Dispose();
                 _waveOut?.Dispose();
@@ -105,6 +106,18 @@ namespace EditWave.Services
                 _waveOut.Init(_audioStream);
                 Duration = _audioStream.TotalTime.TotalSeconds;
                 _isPlaying = false;
+
+                if (!isTemporary)
+                {
+                    foreach (var file in _undoStack)
+                    {
+                        try { File.Delete(file); } catch { }
+                    }
+                    _undoStack.Clear();
+                    _undoIndex = -1;
+                    SaveUndoState();
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -168,6 +181,11 @@ namespace EditWave.Services
             _waveOut.Play();
             _isPlaying = true;
 
+            //_positionTimer = new System.Timers.Timer(100);
+            //_positionTimer.Elapsed += OnTimerTick;
+            //_positionTimer.Start();
+            //_isPlaying = true;
+            //создаём UI-таймер вместо обычного
             _positionTimer = new DispatcherTimer();
             _positionTimer.Interval = TimeSpan.FromMilliseconds(100);
             _positionTimer.Tick += OnTimerTick;
@@ -284,7 +302,7 @@ namespace EditWave.Services
             if (wasPlaying) Play();
         }
 
-        private string ConvertMp3ToWav(string mp3Path)
+        private string ConvertMp3ToWav(string mp3Path) // так как с мп3 нормально не работает и надо сразу конвертировать чтоб работала громкость и тп
         {
             string tempWav = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".wav");
             using (var reader = new Mp3FileReader(mp3Path))
@@ -396,6 +414,8 @@ namespace EditWave.Services
             }
         }
 
+        //todo волновая фкнкция
+
         public float[] GetWaveformSamples()
         {
             if (_audioStream == null) return new float[0];
@@ -467,7 +487,6 @@ namespace EditWave.Services
         // метод сохр. состояния для "отменить" "вернуть"
         private void SaveUndoState()
         {
-           
             if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
                 return;
 
@@ -499,7 +518,6 @@ namespace EditWave.Services
 
         public void Undo()
         {
-         
             if (!CanUndo()) return;
             _undoIndex--;
             string prevFile = _undoStack[_undoIndex];
@@ -514,7 +532,6 @@ namespace EditWave.Services
 
         public void Redo()
         {
-            
             if (!CanRedo()) return;
             _undoIndex++;
             string nextFile = _undoStack[_undoIndex];
@@ -526,6 +543,7 @@ namespace EditWave.Services
             }
             UndoStateChanged?.Invoke();
         }
+
         public void ApplyGainToSelection(float gainFactor, double startSeconds, double endSeconds)
         {
             if (_audioStream == null) return;
@@ -649,6 +667,7 @@ namespace EditWave.Services
                 if (File.Exists(tempProcessed)) File.Delete(tempProcessed);
             }
         }
+
         public void ApplyReverseToSelection(double startSeconds, double endSeconds)
         {
             if (_audioStream == null) return;
