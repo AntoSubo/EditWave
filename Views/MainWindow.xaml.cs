@@ -59,14 +59,6 @@ namespace EditWave.Views
                 _viewModel.ShowAboutCommand.Execute(null);
                 e.Handled = true;
             }
-            else if (e.Key == Key.Space)
-            {
-                if (_viewModel.IsPlaying)
-                    _viewModel.PauseCommand.Execute(null);
-                else
-                    _viewModel.PlayCommand.Execute(null);
-                e.Handled = true;
-            }
             base.OnKeyDown(e);
         }
 
