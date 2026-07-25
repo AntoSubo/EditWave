@@ -269,20 +269,29 @@ namespace EditWave.ViewModels
 
         private async void Trim(object parameter)
         {
-            if (_audioService == null) return;
             if (SelectionStart >= SelectionEnd)
             {
                 MessageBox.Show("Сначала выделите фрагмент");
                 return;
             }
             IsProcessing = true;
-            await Task.Run(() => _audioService.Trim(SelectionStart, SelectionEnd));
-            IsProcessing = false;
-            Duration = _audioService.Duration;
-            LoadWaveform();
-            SelectionStart = 0;
-            SelectionEnd = 0;
-            MessageBox.Show("Фрагмент обрезан");
+            try
+            {
+                await Task.Run(() => _audioService.Trim(SelectionStart, SelectionEnd));
+                Duration = _audioService.Duration;
+                LoadWaveform();
+                SelectionStart = 0;
+                SelectionEnd = 0;
+                MessageBox.Show("Фрагмент обрезан");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
         }
 
         private async void Delete(object parameter)
@@ -293,76 +302,81 @@ namespace EditWave.ViewModels
                 return;
             }
             IsProcessing = true;
-            await Task.Run(() => _audioService.DeleteSelection(SelectionStart, SelectionEnd));
-            IsProcessing = false;
-            Duration = _audioService.Duration;
-            LoadWaveform();
-            SelectionStart = 0;
-            SelectionEnd = 0;
-            MessageBox.Show("Фрагмент удалён");
+            try
+            {
+                await Task.Run(() => _audioService.DeleteSelection(SelectionStart, SelectionEnd));
+                Duration = _audioService.Duration;
+                LoadWaveform();
+                SelectionStart = 0;
+                SelectionEnd = 0;
+                MessageBox.Show("Фрагмент удалён");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
         }
 
         private async void ApplyGain(object parameter)
         {
-            //if (_audioService == null) return;
-            //float gainFactor = (float)(Gain / 100.0);
-            //if (SelectionStart < SelectionEnd)
-            //{
-            //    _audioService.ApplyGainToSelection(gainFactor, SelectionStart, SelectionEnd);
-            //    SelectionStart = 0;
-            //    SelectionEnd = 0;
-            //}
-            //else
-            //{
-            //    _audioService.ApplyGain(gainFactor);
-            //}
-            if (_audioService == null) return;
             IsProcessing = true;
-            await Task.Run(() =>
+            try
             {
-                float gainFactor = (float)(Gain / 100.0);
-                if (SelectionStart < SelectionEnd)
-                    _audioService.ApplyGainToSelection(gainFactor, SelectionStart, SelectionEnd);
-                else
-                    _audioService.ApplyGain(gainFactor);
-            });
-            IsProcessing = false;
-            Duration = _audioService.Duration;
-            LoadWaveform();
-            MessageBox.Show($"Усиление применено: {Gain}%");
+                await Task.Run(() =>
+                {
+                    float gainFactor = (float)(Gain / 100.0);
+                    if (SelectionStart < SelectionEnd)
+                        _audioService.ApplyGainToSelection(gainFactor, SelectionStart, SelectionEnd);
+                    else
+                        _audioService.ApplyGain(gainFactor);
+                });
+                Duration = _audioService.Duration;
+                LoadWaveform();
+                MessageBox.Show($"Усиление применено: {Gain}%");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
         }
 
         private async void ApplyReverse(object parameter)
         {
-            //if (_audioService == null) return;
-            //if (SelectionStart < SelectionEnd)
-            //{
-            //    _audioService.ApplyReverseToSelection(SelectionStart, SelectionEnd);
-            //    SelectionStart = 0;
-            //    SelectionEnd = 0;
-            //}
-            //else
-            //{
-            //    _audioService.ApplyReverse();
-            //}
-            if (_audioService == null) return;
             IsProcessing = true;
-            await Task.Run(() =>
+            try
             {
-                if (SelectionStart < SelectionEnd)
-                    _audioService.ApplyReverseToSelection(SelectionStart, SelectionEnd);
-                else
-                    _audioService.ApplyReverse();
-            });
-            IsProcessing = false;
-            Duration = _audioService.Duration;
-            LoadWaveform();
-            MessageBox.Show("Реверс применён", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+                await Task.Run(() =>
+                {
+                    if (SelectionStart < SelectionEnd)
+                        _audioService.ApplyReverseToSelection(SelectionStart, SelectionEnd);
+                    else
+                        _audioService.ApplyReverse();
+                });
+                Duration = _audioService.Duration;
+                LoadWaveform();
+                MessageBox.Show("Реверс применён", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
         }
 
         private void ExportAudio(object parameter)
         {
-            if (_audioService == null || string.IsNullOrEmpty(_audioService.GetCurrentFilePath()))
+            if (string.IsNullOrEmpty(_audioService.GetCurrentFilePath()))
             {
                 MessageBox.Show("Нет аудио для экспорта");
                 return;
@@ -372,14 +386,21 @@ namespace EditWave.ViewModels
             dialog.Title = "Экспорт аудио";
             if (dialog.ShowDialog() == true)
             {
-                _audioService.Export(dialog.FileName);
-                MessageBox.Show("Экспорт завершён");
+                try
+                {
+                    _audioService.Export(dialog.FileName);
+                    MessageBox.Show("Экспорт завершён");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
         private void SaveProject(object parameter)
         {
-            if (_audioService == null || string.IsNullOrEmpty(_audioService.GetCurrentFilePath()))
+            if (string.IsNullOrEmpty(_audioService.GetCurrentFilePath()))
             {
                 MessageBox.Show("Сначала загрузите аудиофайл", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -445,24 +466,44 @@ namespace EditWave.ViewModels
         {
             if (!_audioService.CanUndo()) return;
             IsProcessing = true;
-            await Task.Run(() => _audioService.Undo());
-            IsProcessing = false;
-            Duration = _audioService.Duration;
-            CurrentPosition = 0;
-            LoadWaveform();
-            CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+            try
+            {
+                await Task.Run(() => _audioService.Undo());
+                Duration = _audioService.Duration;
+                CurrentPosition = 0;
+                LoadWaveform();
+                CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
         }
 
         private async void Redo(object parameter)
         {
             if (!_audioService.CanRedo()) return;
             IsProcessing = true;
-            await Task.Run(() => _audioService.Redo());
-            IsProcessing = false;
-            Duration = _audioService.Duration;
-            CurrentPosition = 0;
-            LoadWaveform();
-            CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+            try
+            {
+                await Task.Run(() => _audioService.Redo());
+                Duration = _audioService.Duration;
+                CurrentPosition = 0;
+                LoadWaveform();
+                CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
         }
     }
 

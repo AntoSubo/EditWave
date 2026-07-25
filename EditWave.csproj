@@ -10,39 +10,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="wiewmodel\**" />
-    <EmbeddedResource Remove="wiewmodel\**" />
-    <None Remove="wiewmodel\**" />
-    <Page Remove="wiewmodel\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="lame.exe" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="LiteDB" Version="5.0.21" />
-    <PackageReference Include="LiveCharts.Wpf" Version="0.9.7" />
     <PackageReference Include="NAudio" Version="2.2.1" />
-    <PackageReference Include="NAudio.Lame" Version="2.1.0" />
-    <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="free-icon-music-application-8030594.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
-    <Resource Include="lame.exe">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
+    <None Include="lame.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-  </ItemGroup>
-
-	<Target Name="CopyLameExe" AfterTargets="Build">
-		<Copy SourceFiles="$(ProjectDir)lame.exe" DestinationFolder="$(OutputPath)" Condition="Exists('$(ProjectDir)lame.exe')" />
-	</Target>
-	
 </Project>
