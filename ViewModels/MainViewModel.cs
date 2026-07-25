@@ -1,7 +1,6 @@
 ﻿using EditWave.Models;
 using EditWave.Services;
 using EditWave.Views;
-using Microsoft.VisualBasic;
 using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
@@ -205,7 +204,8 @@ namespace EditWave.ViewModels
         {
             if (parameter is Project project)
             {
-                string newName = Interaction.InputBox("Новое название:", "Переименование", project.Name);
+                string newName = DialogService.ShowInputDialog("Новое название:", "Переименование", project.Name);
+                if (newName == null) return;
                 if (!string.IsNullOrWhiteSpace(newName) && newName != project.Name)
                 {
                     var existing = _projectService.GetAllProjects().FirstOrDefault(p => p.Name == newName);
@@ -405,7 +405,8 @@ namespace EditWave.ViewModels
                 MessageBox.Show("Сначала загрузите аудиофайл", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            string projectName = Interaction.InputBox("Введите название проекта:", "Сохранение проекта", "Мой проект");
+            string projectName = DialogService.ShowInputDialog("Введите название проекта:", "Сохранение проекта", "Мой проект");
+            if (projectName == null) return;
             if (string.IsNullOrWhiteSpace(projectName)) return;
 
             string currentFilePath = _audioService.GetCurrentFilePath();
