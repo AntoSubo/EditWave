@@ -1,10 +1,5 @@
 ﻿using EditWave.Models;
 using LiteDB;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EditWave.Services
 {
@@ -50,19 +45,5 @@ namespace EditWave.Services
                 projects.Delete(id);
             }
         }
-        public void UpdateProjectName(int id, string newName)
-        {
-            using (var db = new LiteDatabase(DatabaseFile))
-            {
-                var projects = db.GetCollection<Project>("projects");
-                var project = projects.FindById(id);
-                if (project != null)
-                {
-                    project.Name = newName;
-                    projects.Update(project);
-                }
-            }
-        }
-
     }
 }

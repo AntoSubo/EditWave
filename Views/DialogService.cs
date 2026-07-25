@@ -4,7 +4,7 @@ namespace EditWave.Views
 {
     public static class DialogService
     {
-        public static string ShowInputDialog(string prompt, string title, string defaultValue = "")
+        public static string? ShowInputDialog(string prompt, string title, string defaultValue = "")
         {
             var dialog = new InputDialog(prompt, title, defaultValue)
             {

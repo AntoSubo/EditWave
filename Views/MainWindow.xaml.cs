@@ -54,6 +54,26 @@ namespace EditWave.Views
                 _viewModel.RedoCommand.Execute(null);
                 e.Handled = true;
             }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.G)
+            {
+                _viewModel.ApplyGainCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.R)
+            {
+                _viewModel.ApplyReverseCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Left)
+            {
+                _viewModel.SeekBy(-5);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Right)
+            {
+                _viewModel.SeekBy(5);
+                e.Handled = true;
+            }
             else if (e.Key == Key.F1)
             {
                 _viewModel.ShowAboutCommand.Execute(null);
@@ -62,8 +82,21 @@ namespace EditWave.Views
             base.OnKeyDown(e);
         }
 
-        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            if (_viewModel.HasUnsavedChanges)
+            {
+                var result = MessageBox.Show("Есть несохранённые изменения. Сохранить перед выходом?", "Выход", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                if (result == MessageBoxResult.Yes)
+                {
+                    _viewModel.SaveProjectCommand.Execute(null);
+                }
+                else if (result == MessageBoxResult.Cancel)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
             _viewModel.Clean();
         }
 
@@ -73,13 +106,5 @@ namespace EditWave.Views
             _viewModel.SelectionEnd = endSeconds;
         }
 
-        private void ProjectListBox_DoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            var listBox = (ListBox)sender;
-            if (listBox.SelectedItem is EditWave.Models.Project project)
-            {
-                _viewModel.LoadProject(project);
-            }
-        }
     }
 }

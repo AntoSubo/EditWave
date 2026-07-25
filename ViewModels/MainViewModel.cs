@@ -6,6 +6,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
@@ -19,16 +20,17 @@ namespace EditWave.ViewModels
         private double _currentPosition;
         private double _currentPositionNormalized;
         private double _duration;
-        private double _volume;
+        private double _volume = 1.0;
         private double _gain;
         private readonly ProjectService _projectService;
         private ObservableCollection<Project> _projectsList;
-        private Project _selectedProject;
+        private Project? _selectedProject;
         private double _selectionStart;
         private double _selectionEnd;
-        private float[] _waveformSamples;
+        private float[]? _waveformSamples;
         private bool _isProcessing;
         public bool IsPlaying => _audioService.IsPlaying;
+        public bool HasUnsavedChanges => _audioService.CanUndo();
         public bool IsProcessing
         {
             get => _isProcessing;
@@ -53,7 +55,7 @@ namespace EditWave.ViewModels
             set { _canRedo = value; OnPropertyChanged(); }
         }
 
-        public Project SelectedProject
+        public Project? SelectedProject
         {
             get => _selectedProject;
             set
@@ -67,13 +69,23 @@ namespace EditWave.ViewModels
         public double SelectionStart
         {
             get => _selectionStart;
-            set { _selectionStart = value; OnPropertyChanged(); }
+            set { _selectionStart = value; OnPropertyChanged(); OnPropertyChanged(nameof(SelectionDuration)); }
         }
 
         public double SelectionEnd
         {
             get => _selectionEnd;
-            set { _selectionEnd = value; OnPropertyChanged(); }
+            set { _selectionEnd = value; OnPropertyChanged(); OnPropertyChanged(nameof(SelectionDuration)); }
+        }
+
+        public string SelectionDuration
+        {
+            get
+            {
+                if (SelectionStart >= SelectionEnd) return "";
+                double duration = SelectionEnd - SelectionStart;
+                return $"Выделение: {TimeSpan.FromSeconds(duration):mm\\:ss\\.ff}";
+            }
         }
 
         public string CurrentTime
@@ -128,7 +140,7 @@ namespace EditWave.ViewModels
             set { if (_gain != value) { _gain = value; OnPropertyChanged(); } }
         }
 
-        public float[] WaveformSamples
+        public float[]? WaveformSamples
         {
             get => _waveformSamples;
             set { _waveformSamples = value; OnPropertyChanged(); }
@@ -156,6 +168,7 @@ namespace EditWave.ViewModels
             _audioService = new AudioService();
             _audioService.PositionChanged += OnPositionChanged;
             _audioService.UndoStateChanged += UpdateUndoRedoState;
+            _audioService.SetVolume((float)_volume);
             UpdateUndoRedoState();
             PlayCommand = new RelayCommand(Play);
             PauseCommand = new RelayCommand(Pause);
@@ -204,7 +217,7 @@ namespace EditWave.ViewModels
         {
             if (parameter is Project project)
             {
-                string newName = DialogService.ShowInputDialog("Новое название:", "Переименование", project.Name);
+                string? newName = DialogService.ShowInputDialog("Новое название:", "Переименование", project.Name);
                 if (newName == null) return;
                 if (!string.IsNullOrWhiteSpace(newName) && newName != project.Name)
                 {
@@ -215,16 +228,23 @@ namespace EditWave.ViewModels
                         return;
                     }
                     string oldPath = project.FilePath;
-                    string folder = Path.GetDirectoryName(oldPath);
+                    string folder = Path.GetDirectoryName(oldPath) ?? string.Empty;
                     string newPath = Path.Combine(folder, newName + ".wav");
-                    if (File.Exists(oldPath)) File.Move(oldPath, newPath);
-                    project.Name = newName;
-                    project.FilePath = newPath;
-                    project.LastModified = DateTime.Now;
-                    _projectService.SaveProject(project);
-                    LoadProjectsFromDb();
-                    SelectedProject = project;
-                    MessageBox.Show($"Проект переименован в \"{newName}\"");
+                    try
+                    {
+                        if (File.Exists(oldPath)) File.Move(oldPath, newPath);
+                        project.Name = newName;
+                        project.FilePath = newPath;
+                        project.LastModified = DateTime.Now;
+                        _projectService.SaveProject(project);
+                        LoadProjectsFromDb();
+                        SelectedProject = project;
+                        MessageBox.Show($"Проект переименован в \"{newName}\"");
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Ошибка при переименовании: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
                 }
             }
         }
@@ -253,7 +273,8 @@ namespace EditWave.ViewModels
 
         private void OnPositionChanged()
         {
-            CurrentPosition = _audioService.CurrentPosition;
+            _currentPosition = _audioService.CurrentPosition;
+            OnPropertyChanged(nameof(CurrentPosition));
             CurrentTime = $"{TimeSpan.FromSeconds(CurrentPosition):mm\\:ss}/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
             if (Duration > 0) CurrentPositionNormalized = CurrentPosition / Duration;
         }
@@ -267,22 +288,38 @@ namespace EditWave.ViewModels
             CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
         }
 
+        public void SeekBy(double seconds)
+        {
+            double newPos = CurrentPosition + seconds;
+            if (newPos < 0) newPos = 0;
+            if (newPos > Duration) newPos = Duration;
+            CurrentPosition = newPos;
+        }
+
         private async void Trim(object parameter)
         {
+            if (IsProcessing) return;
             if (SelectionStart >= SelectionEnd)
             {
                 MessageBox.Show("Сначала выделите фрагмент");
                 return;
             }
+            var confirm = MessageBox.Show("Обрезать выделенный фрагмент?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
             IsProcessing = true;
             try
             {
-                await Task.Run(() => _audioService.Trim(SelectionStart, SelectionEnd));
-                Duration = _audioService.Duration;
-                LoadWaveform();
+                _audioService.Stop();
+                string? tempFile = await Task.Run(() => _audioService.Trim(SelectionStart, SelectionEnd));
+                if (tempFile != null)
+                {
+                    _audioService.LoadFile(tempFile, isTemporary: true);
+                    Duration = _audioService.Duration;
+                    LoadWaveform();
+                }
                 SelectionStart = 0;
                 SelectionEnd = 0;
-                MessageBox.Show("Фрагмент обрезан");
+                if (tempFile != null) MessageBox.Show("Фрагмент обрезан");
             }
             catch (Exception ex)
             {
@@ -296,20 +333,28 @@ namespace EditWave.ViewModels
 
         private async void Delete(object parameter)
         {
+            if (IsProcessing) return;
             if (SelectionStart >= SelectionEnd)
             {
                 MessageBox.Show("Сначала выделите фрагмент");
                 return;
             }
+            var confirm = MessageBox.Show("Удалить выделенный фрагмент?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
             IsProcessing = true;
             try
             {
-                await Task.Run(() => _audioService.DeleteSelection(SelectionStart, SelectionEnd));
-                Duration = _audioService.Duration;
-                LoadWaveform();
+                _audioService.Stop();
+                string? tempFile = await Task.Run(() => _audioService.DeleteSelection(SelectionStart, SelectionEnd));
+                if (tempFile != null)
+                {
+                    _audioService.LoadFile(tempFile, isTemporary: true);
+                    Duration = _audioService.Duration;
+                    LoadWaveform();
+                }
                 SelectionStart = 0;
                 SelectionEnd = 0;
-                MessageBox.Show("Фрагмент удалён");
+                if (tempFile != null) MessageBox.Show("Фрагмент удалён");
             }
             catch (Exception ex)
             {
@@ -323,20 +368,26 @@ namespace EditWave.ViewModels
 
         private async void ApplyGain(object parameter)
         {
+            if (IsProcessing) return;
+            var confirm = MessageBox.Show("Применить усиление к аудио?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
             IsProcessing = true;
             try
             {
-                await Task.Run(() =>
+                _audioService.Stop();
+                float gainFactor = (float)(Gain / 100.0);
+                string? tempFile;
+                if (SelectionStart < SelectionEnd)
+                    tempFile = await Task.Run(() => _audioService.ApplyGainToSelection(gainFactor, SelectionStart, SelectionEnd));
+                else
+                    tempFile = await Task.Run(() => _audioService.ApplyGain(gainFactor));
+                if (tempFile != null)
                 {
-                    float gainFactor = (float)(Gain / 100.0);
-                    if (SelectionStart < SelectionEnd)
-                        _audioService.ApplyGainToSelection(gainFactor, SelectionStart, SelectionEnd);
-                    else
-                        _audioService.ApplyGain(gainFactor);
-                });
-                Duration = _audioService.Duration;
-                LoadWaveform();
-                MessageBox.Show($"Усиление применено: {Gain}%");
+                    _audioService.LoadFile(tempFile, isTemporary: true);
+                    Duration = _audioService.Duration;
+                    LoadWaveform();
+                    MessageBox.Show($"Усиление применено: {Gain}%");
+                }
             }
             catch (Exception ex)
             {
@@ -350,19 +401,25 @@ namespace EditWave.ViewModels
 
         private async void ApplyReverse(object parameter)
         {
+            if (IsProcessing) return;
+            var confirm = MessageBox.Show("Применить реверс к аудио?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes) return;
             IsProcessing = true;
             try
             {
-                await Task.Run(() =>
+                _audioService.Stop();
+                string? tempFile;
+                if (SelectionStart < SelectionEnd)
+                    tempFile = await Task.Run(() => _audioService.ApplyReverseToSelection(SelectionStart, SelectionEnd));
+                else
+                    tempFile = await Task.Run(() => _audioService.ApplyReverse());
+                if (tempFile != null)
                 {
-                    if (SelectionStart < SelectionEnd)
-                        _audioService.ApplyReverseToSelection(SelectionStart, SelectionEnd);
-                    else
-                        _audioService.ApplyReverse();
-                });
-                Duration = _audioService.Duration;
-                LoadWaveform();
-                MessageBox.Show("Реверс применён", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _audioService.LoadFile(tempFile, isTemporary: true);
+                    Duration = _audioService.Duration;
+                    LoadWaveform();
+                    MessageBox.Show("Реверс применён", "Готово", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             }
             catch (Exception ex)
             {
@@ -405,7 +462,7 @@ namespace EditWave.ViewModels
                 MessageBox.Show("Сначала загрузите аудиофайл", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            string projectName = DialogService.ShowInputDialog("Введите название проекта:", "Сохранение проекта", "Мой проект");
+            string? projectName = DialogService.ShowInputDialog("Введите название проекта:", "Сохранение проекта", "Мой проект");
             if (projectName == null) return;
             if (string.IsNullOrWhiteSpace(projectName)) return;
 
@@ -415,24 +472,33 @@ namespace EditWave.ViewModels
             Directory.CreateDirectory(projectFolder);
             string savePath = Path.Combine(projectFolder, projectName + ".wav");
 
-            var existingProject = _projectService.GetAllProjects().FirstOrDefault(p => p.Name == projectName);
-            if (existingProject != null)
+            try
             {
-                var result = MessageBox.Show($"Проект \"{projectName}\" уже существует. Перезаписать?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (result != MessageBoxResult.Yes) return;
-                if (File.Exists(existingProject.FilePath)) File.Delete(existingProject.FilePath);
-                existingProject.FilePath = savePath;
-                existingProject.LastModified = DateTime.Now;
-                _projectService.SaveProject(existingProject);
+                var existingProject = _projectService.GetAllProjects().FirstOrDefault(p => p.Name == projectName);
+                if (existingProject != null)
+                {
+                    var result = MessageBox.Show($"Проект \"{projectName}\" уже существует. Перезаписать?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result != MessageBoxResult.Yes) return;
+                    existingProject.FilePath = savePath;
+                    existingProject.LastModified = DateTime.Now;
+                    _projectService.SaveProject(existingProject);
+                }
+                else
+                {
+                    var project = new Project { Name = projectName, FilePath = savePath, LastModified = DateTime.Now };
+                    _projectService.SaveProject(project);
+                }
+                if (currentFilePath != savePath)
+                {
+                    File.Copy(currentFilePath, savePath, true);
+                }
+                LoadProjectsFromDb();
+                MessageBox.Show($"Проект \"{projectName}\" сохранён!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-            else
+            catch (Exception ex)
             {
-                var project = new Project { Name = projectName, FilePath = savePath, LastModified = DateTime.Now };
-                _projectService.SaveProject(project);
+                MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            if (isTemporary || !File.Exists(savePath)) File.Copy(currentFilePath, savePath, true);
-            LoadProjectsFromDb();
-            MessageBox.Show($"Проект \"{projectName}\" сохранён!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void OpenProject(object parameter)
@@ -465,15 +531,21 @@ namespace EditWave.ViewModels
         public void Clean() => _audioService.Dispose();
         private async void Undo(object parameter)
         {
+            if (IsProcessing) return;
             if (!_audioService.CanUndo()) return;
             IsProcessing = true;
             try
             {
-                await Task.Run(() => _audioService.Undo());
-                Duration = _audioService.Duration;
-                CurrentPosition = 0;
-                LoadWaveform();
-                CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+                _audioService.Stop();
+                string? file = await Task.Run(() => _audioService.Undo());
+                if (file != null)
+                {
+                    _audioService.LoadFile(file, isTemporary: true);
+                    Duration = _audioService.Duration;
+                    CurrentPosition = 0;
+                    LoadWaveform();
+                    CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+                }
             }
             catch (Exception ex)
             {
@@ -487,15 +559,21 @@ namespace EditWave.ViewModels
 
         private async void Redo(object parameter)
         {
+            if (IsProcessing) return;
             if (!_audioService.CanRedo()) return;
             IsProcessing = true;
             try
             {
-                await Task.Run(() => _audioService.Redo());
-                Duration = _audioService.Duration;
-                CurrentPosition = 0;
-                LoadWaveform();
-                CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+                _audioService.Stop();
+                string? file = await Task.Run(() => _audioService.Redo());
+                if (file != null)
+                {
+                    _audioService.LoadFile(file, isTemporary: true);
+                    Duration = _audioService.Duration;
+                    CurrentPosition = 0;
+                    LoadWaveform();
+                    CurrentTime = $"00:00/{TimeSpan.FromSeconds(Duration):mm\\:ss}";
+                }
             }
             catch (Exception ex)
             {

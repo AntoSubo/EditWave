@@ -26,8 +26,8 @@
                 <MenuItem Header="Удалить" Command="{Binding DeleteCommand}" InputGestureText="Del"/>
             </MenuItem>
             <MenuItem Header="Эффекты">
-                <MenuItem Header="Усиление" Command="{Binding ApplyGainCommand}"/>
-                <MenuItem Header="Реверс" Command="{Binding ApplyReverseCommand}"/>
+                <MenuItem Header="Усиление" Command="{Binding ApplyGainCommand}" InputGestureText="Ctrl+G"/>
+                <MenuItem Header="Реверс" Command="{Binding ApplyReverseCommand}" InputGestureText="Ctrl+R"/>
             </MenuItem>
             <MenuItem Header="Справка">
                 <MenuItem Header="О программе" Command="{Binding ShowAboutCommand}"/>
@@ -84,7 +84,7 @@
 
                         <TextBlock Text="Проекты" FontWeight="Bold" Foreground="#333" Margin="0,0,0,5"/>
                         <TextBlock Text="Двойной клик - загрузить" FontSize="10" Foreground="#666" Margin="0,0,0,5"/>
-                        <ListBox Height="250" ItemsSource="{Binding ProjectsList}" SelectedItem="{Binding SelectedProject}" MouseDoubleClick="ProjectListBox_DoubleClick">
+                        <ListBox Height="250" ItemsSource="{Binding ProjectsList}" SelectedItem="{Binding SelectedProject}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -119,6 +119,7 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0" Text="{Binding CurrentTime}" VerticalAlignment="Center" Foreground="#333" Margin="0,0,10,0" FontFamily="Consolas" FontSize="13"/>
+                <TextBlock Grid.Column="0" Text="{Binding SelectionDuration}" VerticalAlignment="Center" Foreground="#FF4081" Margin="120,0,0,0" FontFamily="Consolas" FontSize="12" FontWeight="Bold"/>
                 <Slider Grid.Column="1" Value="{Binding CurrentPosition}" Maximum="{Binding Duration}" Margin="10,0" ToolTip="Перемотка"/>
 
                 <ProgressBar Grid.Column="2" Width="100" Height="15" Margin="10,0" IsIndeterminate="True">

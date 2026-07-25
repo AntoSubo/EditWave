@@ -39,19 +39,23 @@ namespace EditWave.Views
             set => SetValue(PlaybackPositionProperty, value);
         }
 
-        public event Action<double, double> SelectionChanged;
+        public event Action<double, double>? SelectionChanged;
 
         private bool _isSelecting;
         private double _selectionStartX;
         private double _selectionEndX;
-        private Rectangle _selectionRect;
-        private float[] _displaySamples;
+        private Rectangle? _selectionRect;
+        private float[]? _displaySamples;
 
         public WaveformControl()
         {
             InitializeComponent();
             Loaded += OnLoaded;
-            SizeChanged += (_, __) => Redraw();
+            SizeChanged += (_, __) =>
+            {
+                Redraw();
+                UpdatePlaybackCursor(PlaybackPosition);
+            };
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -72,6 +76,7 @@ namespace EditWave.Views
         private static void OnSamplesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var control = (WaveformControl)d;
+            control.ClearSelection();
             control.PrepareDisplaySamples();
             control.Redraw();
         }
@@ -206,19 +211,12 @@ namespace EditWave.Views
             double startX = Math.Min(_selectionStartX, _selectionEndX);
             double endX = Math.Max(_selectionStartX, _selectionEndX);
             double width = endX - startX;
+            if (_selectionRect == null) return;
             _selectionRect.Width = width;
             _selectionRect.Height = WaveCanvas.ActualHeight;
             Canvas.SetLeft(_selectionRect, startX);
             Canvas.SetTop(_selectionRect, 0);
             _selectionRect.Visibility = Visibility.Visible;
-        }
-        private void OnSizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (e.NewSize.Width > 0 && _displaySamples != null && _displaySamples.Length > 0)
-            {
-                Redraw();
-                UpdatePlaybackCursor(PlaybackPosition);
-            }
         }
         public void ClearSelection()
         {
