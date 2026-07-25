@@ -7,7 +7,7 @@ namespace EditWave.Views
 {
     public partial class MainWindow : Window
     {
-        private MainViewModel _viewModel;
+        private readonly MainViewModel _viewModel;
 
         public MainWindow()
         {
@@ -75,8 +75,8 @@ namespace EditWave.Views
 
         private void ProjectListBox_DoubleClick(object sender, MouseButtonEventArgs e)
         {
-            var listBox = sender as ListBox;
-            if (listBox?.SelectedItem is EditWave.Models.Project project)
+            var listBox = (ListBox)sender;
+            if (listBox.SelectedItem is EditWave.Models.Project project)
             {
                 _viewModel.LoadProject(project);
             }
