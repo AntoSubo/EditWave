@@ -1,6 +1,6 @@
 ﻿using EditWave.ViewModels;
+using System.IO;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace EditWave.Views
@@ -9,10 +9,10 @@ namespace EditWave.Views
     {
         private readonly MainViewModel _viewModel;
 
-        public MainWindow()
+        public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
-            _viewModel = new MainViewModel();
+            _viewModel = viewModel;
             DataContext = _viewModel;
             this.Closing += MainWindow_Closing;
         }
@@ -79,23 +79,25 @@ namespace EditWave.Views
                 _viewModel.ShowAboutCommand.Execute(null);
                 e.Handled = true;
             }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
+            {
+                _viewModel.CopySelectionCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.V)
+            {
+                _viewModel.PasteCommand.Execute(null);
+                e.Handled = true;
+            }
             base.OnKeyDown(e);
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (_viewModel.HasUnsavedChanges)
+            if (!_viewModel.HandleClosing())
             {
-                var result = MessageBox.Show("Есть несохранённые изменения. Сохранить перед выходом?", "Выход", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-                if (result == MessageBoxResult.Yes)
-                {
-                    _viewModel.SaveProjectCommand.Execute(null);
-                }
-                else if (result == MessageBoxResult.Cancel)
-                {
-                    e.Cancel = true;
-                    return;
-                }
+                e.Cancel = true;
+                return;
             }
             _viewModel.Clean();
         }
@@ -106,5 +108,23 @@ namespace EditWave.Views
             _viewModel.SelectionEnd = endSeconds;
         }
 
+        private void Window_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                e.Effects = DragDropEffects.Copy;
+            else
+                e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void Window_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[]? files = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (files is { Length: > 0 })
+                    _viewModel.LoadAudioFromPath(files[0], $"Файл загружен: {Path.GetFileName(files[0])}");
+            }
+        }
     }
 }

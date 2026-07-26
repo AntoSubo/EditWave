@@ -4,6 +4,7 @@
         xmlns:views="clr-namespace:EditWave.Views"
         Title="EditWave" Height="550" Width="950" MinHeight="500" MinWidth="800"
            Icon="../free-icon-music-application-8030594.ico"
+        AllowDrop="True" Drop="Window_Drop" DragOver="Window_DragOver"
         Background="#F5F5F5">
     <Grid>
         <Grid.RowDefinitions>
@@ -24,12 +25,31 @@
             <MenuItem Header="Правка">
                 <MenuItem Header="Обрезать" Command="{Binding TrimCommand}" InputGestureText="Ctrl+T"/>
                 <MenuItem Header="Удалить" Command="{Binding DeleteCommand}" InputGestureText="Del"/>
+                <Separator/>
+                <MenuItem Header="Копировать" Command="{Binding CopySelectionCommand}" InputGestureText="Ctrl+C"/>
+                <MenuItem Header="Вставить" Command="{Binding PasteCommand}" InputGestureText="Ctrl+V"/>
+                <Separator/>
+                <MenuItem Header="Вставить тишину..." Command="{Binding InsertSilenceCommand}"/>
             </MenuItem>
             <MenuItem Header="Эффекты">
                 <MenuItem Header="Усиление" Command="{Binding ApplyGainCommand}" InputGestureText="Ctrl+G"/>
                 <MenuItem Header="Реверс" Command="{Binding ApplyReverseCommand}" InputGestureText="Ctrl+R"/>
+                <MenuItem Header="Плавное начало" Command="{Binding ApplyFadeInCommand}"/>
+                <MenuItem Header="Плавное затухание" Command="{Binding ApplyFadeOutCommand}"/>
+                <MenuItem Header="Нормализовать" Command="{Binding ApplyNormalizeCommand}"/>
+                <MenuItem Header="Обрезать тишину" Command="{Binding TrimSilenceCommand}"/>
+                <Separator/>
+                <MenuItem Header="Скорость..." Command="{Binding ApplySpeedCommand}"/>
+                <MenuItem Header="Тон..." Command="{Binding ApplyPitchCommand}"/>
+                <MenuItem Header="Эквалайзер..." Command="{Binding ApplyEQCommand}"/>
+            </MenuItem>
+            <MenuItem Header="Конвертировать">
+                <MenuItem Header="В моно" Command="{Binding ToMonoCommand}"/>
+                <MenuItem Header="В стерео" Command="{Binding ToStereoCommand}"/>
             </MenuItem>
             <MenuItem Header="Справка">
+                <MenuItem Header="Метаданные (ID3)..." Command="{Binding EditMetadataCommand}"/>
+                <Separator/>
                 <MenuItem Header="О программе" Command="{Binding ShowAboutCommand}"/>
             </MenuItem>
         </Menu>
@@ -41,6 +61,14 @@
             <Separator/>
             <Button Command="{Binding TrimCommand}" Content="✂ Обрезать" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Обрезать по выделению"/>
             <Button Command="{Binding DeleteCommand}" Content="🗑 Удалить" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Удалить выделенное"/>
+            <Separator/>
+            <Button Command="{Binding CopySelectionCommand}" Content="📋 Копировать" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Копировать выделение (Ctrl+C)"/>
+            <Button Command="{Binding PasteCommand}" Content="📄 Вставить" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Вставить из буфера (Ctrl+V)"/>
+            <Button Command="{Binding InsertSilenceCommand}" Content="⬛ Тишина" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Вставить тишину"/>
+            <Button Command="{Binding TrimSilenceCommand}" Content="🔇 Тишина" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Обрезать тишину"/>
+            <Separator/>
+            <Button Command="{Binding ToMonoCommand}" Content="1️⃣ Моно" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Конвертировать в моно"/>
+            <Button Command="{Binding ToStereoCommand}" Content="2️⃣ Стерео" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Конвертировать в стерео"/>
             <Separator/>
             <Button Command="{Binding SaveProjectCommand}" Content="💾 Сохранить проект" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Сохранить проект в базу данных"/>
             <Button Command="{Binding ExportCommand}" Content="📁 Экспорт" Margin="2" Padding="5" Background="White" Foreground="#FF4081" ToolTip="Экспортировать аудио в файл"/>
@@ -74,11 +102,46 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
                         <TextBlock Text="Эффекты" FontWeight="Bold" Foreground="#333" Margin="0,0,0,10"/>
+                        <CheckBox Content="Зациклить выделение" IsChecked="{Binding IsLoopEnabled}" Foreground="#333" Margin="0,0,0,10" ToolTip="Воспроизведение выделенного фрагмента в цикле"/>
                         <TextBlock Text="Усиление:" Foreground="#333"/>
                         <Slider Minimum="0" Maximum="200" Value="{Binding Gain}" Margin="0,5" ToolTip="0% = тихо, 100% = оригинал, 200% = громче"/>
                         <TextBlock Text="{Binding Gain, StringFormat={}{0:F0}%}" HorizontalAlignment="Right" Foreground="#333"/>
                         <Button Command="{Binding ApplyGainCommand}" Content="Применить усиление" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
                         <Button Command="{Binding ApplyReverseCommand}" Content="Применить реверс" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
+                        <Button Command="{Binding ApplyFadeInCommand}" Content="Плавное начало" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
+                        <Button Command="{Binding ApplyFadeOutCommand}" Content="Плавное затухание" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
+                        <Button Command="{Binding ApplyNormalizeCommand}" Content="Нормализовать" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
+
+                        <Separator Margin="0,10,0,10"/>
+
+                        <TextBlock Text="Скорость:" Foreground="#333"/>
+                        <Slider Minimum="0.25" Maximum="4" Value="{Binding Speed}" TickFrequency="0.25" IsSnapToTickEnabled="True" Margin="0,5" ToolTip="0.25x - 4x"/>
+                        <TextBlock Text="{Binding Speed, StringFormat={}{0:F2}x}" HorizontalAlignment="Right" Foreground="#333"/>
+                        <Button Command="{Binding ApplySpeedCommand}" Content="Применить скорость" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
+
+                        <Separator Margin="0,10,0,10"/>
+
+                        <TextBlock Text="Тон:" Foreground="#333"/>
+                        <Slider Minimum="0.5" Maximum="2" Value="{Binding Pitch}" TickFrequency="0.1" IsSnapToTickEnabled="True" Margin="0,5" ToolTip="0.5x - 2x"/>
+                        <TextBlock Text="{Binding Pitch, StringFormat={}{0:F2}x}" HorizontalAlignment="Right" Foreground="#333"/>
+                        <Button Command="{Binding ApplyPitchCommand}" Content="Применить тон" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
+
+                        <Separator Margin="0,10,0,10"/>
+
+                        <TextBlock Text="Эквалайзер" FontWeight="Bold" Foreground="#333" Margin="0,0,0,5"/>
+                        <TextBlock Text="Басы:" Foreground="#333"/>
+                        <Slider Minimum="-10" Maximum="10" Value="{Binding BassGain}" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,5" ToolTip="-10 ослабить, +10 усилить"/>
+                        <TextBlock Text="{Binding BassGain, StringFormat={}{0:F0}}" HorizontalAlignment="Right" Foreground="#333"/>
+                        <TextBlock Text="Высокие:" Foreground="#333"/>
+                        <Slider Minimum="-10" Maximum="10" Value="{Binding TrebleGain}" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,5" ToolTip="-10 ослабить, +10 усилить"/>
+                        <TextBlock Text="{Binding TrebleGain, StringFormat={}{0:F0}}" HorizontalAlignment="Right" Foreground="#333"/>
+                        <Button Command="{Binding ApplyEQCommand}" Content="Применить эквалайзер" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
+
+                        <Separator Margin="0,10,0,10"/>
+
+                        <TextBlock Text="Конвертировать" FontWeight="Bold" Foreground="#333" Margin="0,0,0,5"/>
+                        <Button Command="{Binding ToMonoCommand}" Content="В моно" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
+                        <Button Command="{Binding ToStereoCommand}" Content="В стерео" Margin="5" Padding="5" Background="#FF4081" Foreground="White" BorderThickness="0"/>
 
                         <Separator Margin="0,15,0,10"/>
 
@@ -136,6 +199,7 @@
                 </ProgressBar>
 
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding FormatInfo}" VerticalAlignment="Center" Foreground="#666" FontFamily="Consolas" FontSize="11" Margin="10,0"/>
                     <TextBlock Text="🔊" Margin="0,0,5,0" Foreground="#333"/>
                     <Slider Width="100" Minimum="0" Maximum="1" Value="{Binding Volume}" ToolTip="Громкость воспроизведения"/>
                 </StackPanel>

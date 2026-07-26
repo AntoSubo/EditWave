@@ -1,9 +1,10 @@
-﻿using EditWave.Models;
+﻿using EditWave.Abstractions;
+using EditWave.Models;
 using LiteDB;
 
 namespace EditWave.Services
 {
-    public class ProjectService
+    public class ProjectService : IProjectService
     {
         private const string DatabaseFile = "EditWave.db";
         public void SaveProject(Project project)
@@ -29,7 +30,7 @@ namespace EditWave.Services
                 return projects.Query().OrderByDescending(x => x.Id).ToList();
             }
         }
-        public Project GetProjectById(int id)
+        public Project? GetProjectById(int id)
         {
             using (var db = new LiteDatabase(DatabaseFile))
             {
