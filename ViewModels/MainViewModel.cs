@@ -205,7 +205,6 @@ namespace EditWave.ViewModels
         public ICommand InsertSilenceCommand { get; }
         public ICommand CopySelectionCommand { get; }
         public ICommand PasteCommand { get; }
-        public ICommand EditMetadataCommand { get; }
         public ICommand TrimSilenceCommand { get; }
         public ICommand ApplyEQCommand { get; }
         public ICommand ToMonoCommand { get; }
@@ -266,7 +265,6 @@ namespace EditWave.ViewModels
             InsertSilenceCommand = new RelayCommand(InsertSilence);
             CopySelectionCommand = new RelayCommand(CopySelection);
             PasteCommand = new RelayCommand(Paste);
-            EditMetadataCommand = new RelayCommand(EditMetadata);
             TrimSilenceCommand = new RelayCommand(TrimSilence);
             ApplyEQCommand = new RelayCommand(ApplyEQ);
             ToMonoCommand = new RelayCommand(ToMono);
@@ -754,38 +752,6 @@ namespace EditWave.ViewModels
                 () => Task.FromResult(_editor.PasteAt(position)),
                 $"Вставить фрагмент ({TimeSpan.FromSeconds(clipDuration):mm\\:ss\\.ff})?",
                 "Фрагмент вставлен");
-        }
-
-        private void EditMetadata(object parameter)
-        {
-            if (string.IsNullOrEmpty(_engine.GetCurrentFilePath()))
-            {
-                _dialog.ShowMessage("Сначала загрузите аудиофайл");
-                return;
-            }
-            string ext = System.IO.Path.GetExtension(_engine.GetCurrentFilePath()).ToLower();
-            if (ext != ".mp3")
-            {
-                _dialog.ShowMessage("Метаданные поддерживаются только для MP3 файлов");
-                return;
-            }
-
-            _editor.ReadMetadata(out string? title, out string? artist, out string? album, out string? year);
-
-            string? titleResult = _dialog.ShowInputDialog("Название:", "Метаданные", title ?? "");
-            string? artistResult = _dialog.ShowInputDialog("Исполнитель:", "Метаданные", artist ?? "");
-            string? albumResult = _dialog.ShowInputDialog("Альбом:", "Метаданные", album ?? "");
-            string? yearResult = _dialog.ShowInputDialog("Год:", "Метаданные", year ?? "");
-
-            try
-            {
-                _editor.WriteMetadata(titleResult, artistResult, albumResult, yearResult);
-                _dialog.ShowMessage("Метаданные сохранены");
-            }
-            catch (Exception ex)
-            {
-                _dialog.ShowMessage($"Ошибка: {ex.Message}", "Ошибка", DialogMessageImage.Error);
-            }
         }
 
         private async void TrimSilence(object parameter)

@@ -48,8 +48,6 @@
                 <MenuItem Header="В стерео" Command="{Binding ToStereoCommand}"/>
             </MenuItem>
             <MenuItem Header="Справка">
-                <MenuItem Header="Метаданные (ID3)..." Command="{Binding EditMetadataCommand}"/>
-                <Separator/>
                 <MenuItem Header="О программе" Command="{Binding ShowAboutCommand}"/>
             </MenuItem>
         </Menu>

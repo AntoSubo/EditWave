@@ -551,44 +551,6 @@ namespace EditWave.Services
             }
         }
 
-        public void ReadMetadata(out string? title, out string? artist, out string? album, out string? year)
-        {
-            title = artist = album = year = null;
-            if (_context.CurrentFilePath == null) return;
-
-            try
-            {
-                string ext = Path.GetExtension(_context.CurrentFilePath).ToLower();
-                if (ext != ".mp3") return;
-
-                using var tagFile = TagLib.File.Create(_context.CurrentFilePath);
-                title = tagFile.Tag.Title;
-                artist = tagFile.Tag.FirstPerformer;
-                album = tagFile.Tag.Album;
-                year = tagFile.Tag.Year > 0 ? tagFile.Tag.Year.ToString() : null;
-            }
-            catch { }
-        }
-
-        public void WriteMetadata(string? title, string? artist, string? album, string? year)
-        {
-            if (_context.CurrentFilePath == null) return;
-
-            try
-            {
-                string ext = Path.GetExtension(_context.CurrentFilePath).ToLower();
-                if (ext != ".mp3") return;
-
-                using var tagFile = TagLib.File.Create(_context.CurrentFilePath);
-                tagFile.Tag.Title = string.IsNullOrWhiteSpace(title) ? null : title;
-                tagFile.Tag.Performers = string.IsNullOrWhiteSpace(artist) ? null : new[] { artist };
-                tagFile.Tag.Album = string.IsNullOrWhiteSpace(album) ? null : album;
-                if (int.TryParse(year, out int y)) tagFile.Tag.Year = (uint)y;
-                tagFile.Save();
-            }
-            catch { }
-        }
-
         public string? TrimSilence(float threshold)
         {
             if (_context.AudioStream == null) return null;

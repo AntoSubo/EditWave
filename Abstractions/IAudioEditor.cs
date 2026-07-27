@@ -19,8 +19,6 @@ namespace EditWave.Abstractions
         string? PasteAt(double positionSeconds);
         bool HasClipboard { get; }
         double ClipboardDuration { get; }
-        void ReadMetadata(out string? title, out string? artist, out string? album, out string? year);
-        void WriteMetadata(string? title, string? artist, string? album, string? year);
         string? TrimSilence(float threshold);
         string? ApplyEQ(float bassGain, float trebleGain);
         string? ToMono();

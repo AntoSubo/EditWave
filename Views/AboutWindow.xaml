@@ -63,7 +63,6 @@
                 <TextBlock Text=" - Конвертер моно / стерео" Foreground="#555" FontSize="12"/>
                 <TextBlock Text=" - Обрезка тишины в начале и конце" Foreground="#555" FontSize="12"/>
                 <TextBlock Text=" - Зацикленное воспроизведение выделения" Foreground="#555" FontSize="12"/>
-                <TextBlock Text=" - Метаданные ID3 (название, исполнитель, альбом)" Foreground="#555" FontSize="12"/>
                 <TextBlock Text=" - Отмена и повтор (Ctrl+Z / Ctrl+Y)" Foreground="#555" FontSize="12"/>
                 <TextBlock Text=" - Сохранение и загрузка проектов (LiteDB)" Foreground="#555" FontSize="12"/>
                 <TextBlock Text=" - Перетаскивание файлов в окно" Foreground="#555" FontSize="12"/>
