@@ -363,5 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Third-party tools
-lame.exe
 EditWave.db
+Projects/

@@ -1,5 +1,7 @@
 # EditWave
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Десктопный аудиоредактор на C# / WPF для обработки звука.
 
 ## Стек
